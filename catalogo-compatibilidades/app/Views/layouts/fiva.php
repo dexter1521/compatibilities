@@ -114,7 +114,7 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="#" class="nav-link">
+                    <a href="<?= site_url('/buscador') ?>" class="nav-link">
                         <span class="icon"><i class='bx bx-search-alt'></i></span>
                         <span class="menu-title">Buscador</span>
                     </a>
@@ -162,5 +162,20 @@
     <script src="<?= base_url('fiva-assets/js/custom.js') ?>"></script>
     <script src="https://cdn.jsdelivr.net/npm/htmx.org@1.9.12"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+    <script>
+        // Inyectar CSRF token en todas las peticiones HTMX (necesario para POST)
+        document.addEventListener('htmx:configRequest', function (e) {
+            e.detail.headers['<?= csrf_header() ?>'] = '<?= csrf_hash() ?>';
+        });
+        // Actualizar el token CSRF desde la respuesta HTMX (CI4 lo rota)
+        document.addEventListener('htmx:afterRequest', function (e) {
+            var newToken = e.detail.xhr.getResponseHeader('X-CSRF-TOKEN');
+            if (newToken) {
+                document.querySelectorAll('input[name="<?= csrf_field() ?>"]').forEach(function(el) {
+                    el.value = newToken;
+                });
+            }
+        });
+    </script>
 </body>
 </html>

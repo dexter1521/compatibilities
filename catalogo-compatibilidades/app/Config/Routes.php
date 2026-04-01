@@ -1,6 +1,5 @@
 <?php
 
-use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\Router\RouteCollection;
 
 /**
@@ -8,8 +7,9 @@ use CodeIgniter\Router\RouteCollection;
  */
 $routes->get('/', 'Home::index');
 
-$routes->get('/search', static function () {
-    return service('response')
-        ->setStatusCode(ResponseInterface::HTTP_NOT_IMPLEMENTED)
-        ->setBody('<div class="alert alert-warning mb-0">Buscador en construccion: se habilita en el siguiente bloque.</div>');
-});
+// Buscador
+$routes->get('/buscador', 'Search::index');
+$routes->get('/search',   'Search::results');
+
+// Confirmación de compatibilidad (HTMX POST)
+$routes->post('/compatibilidades/(:num)/confirm', 'Search::confirm/$1');
