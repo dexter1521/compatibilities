@@ -142,8 +142,8 @@
                 </li>
 
                 <li class="nav-item-title">Importación</li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link">
+                <li class="nav-item <?= ($seg1 === 'import') ? 'mm-active' : '' ?>">
+                    <a href="<?= site_url('/import') ?>" class="nav-link <?= ($seg1 === 'import') ? 'active' : '' ?>">
                         <span class="icon"><i class='bx bx-upload'></i></span>
                         <span class="menu-title">Importador</span>
                     </a>
