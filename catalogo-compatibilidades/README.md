@@ -1,32 +1,104 @@
-# CodeIgniter 4 Application Starter
+# Catálogo de Compatibilidades — Shark Motors
 
-## What is CodeIgniter?
+Sistema para responder en mostrador: **¿qué pieza le queda a esta moto?**
 
-CodeIgniter is a PHP full-stack web framework that is light, fast, flexible and secure.
-More information can be found at the [official site](https://codeigniter.com).
+Integra claves de proveedor del POS (MyBusiness) con lógica de compatibilidad pieza ↔ motocicleta.
 
-This repository holds a composer-installable app starter.
-It has been built from the
-[development repository](https://github.com/codeigniter4/CodeIgniter4).
+---
 
-More information about the plans for version 4 can be found in [CodeIgniter 4](https://forum.codeigniter.com/forumdisplay.php?fid=28) on the forums.
+## Stack
 
-You can read the [user guide](https://codeigniter.com/user_guide/)
-corresponding to the latest version of the framework.
+| Capa | Tecnología |
+|---|---|
+| Backend | PHP 8.2 + CodeIgniter 4.4.8 |
+| Base de datos | MariaDB 11.4 |
+| Frontend | FivaAdmin (Bootstrap 4) + HTMX 1.9 + AlpineJS 3.14 |
+| Infra | Docker Compose (app + nginx + db) |
+| Importador | PhpSpreadsheet 5.5 |
 
-## Installation & updates
+---
 
-`composer create-project codeigniter4/appstarter` then `composer update` whenever
-there is a new release of the framework.
+## Levantar el entorno
 
-When updating, check the release notes to see if there are any changes you might need to apply
-to your `app` folder. The affected files can be copied or merged from
-`vendor/codeigniter4/framework/app`.
+```bash
+# Desde la raíz del repo (d:/htdocs/sharkmotors/)
+docker compose up -d
 
-## Setup
+# Verificar contenedores
+docker compose ps
+```
 
-Copy `env` to `.env` and tailor for your app, specifically the baseURL
-and any database settings.
+La app queda disponible en **http://localhost:8080**
+
+---
+
+## Primera vez (migraciones + datos de demo)
+
+```bash
+# Migraciones
+docker compose exec app php spark migrate
+
+# Seed de demostración (motos, piezas, compatibilidades, productos)
+docker compose exec app php spark db:seed DemoSeeder
+```
+
+---
+
+## Módulos
+
+| Ruta | Descripción |
+|---|---|
+| `/` | Dashboard con KPIs y buscador rápido |
+| `/buscador` | Buscador principal por mostrador |
+| `/motos` | CRUD de marcas y motocicletas |
+| `/piezas` | CRUD de piezas maestras |
+| `/compatibilidades` | CRUD de relaciones pieza ↔ moto |
+| `/import` | Importador de Excel/CSV desde MyBusiness |
+
+---
+
+## Importar productos desde Excel
+
+El archivo debe tener columnas (el orden no importa, se detectan por nombre):
+
+| Columna | Descripción |
+|---|---|
+| `proveedor` | Nombre del proveedor (ej. REMSA) |
+| `clave_proveedor` | Clave del POS (ej. BD-HFT150) |
+| `nombre` | Descripción del producto |
+
+Formatos soportados: `.xlsx`, `.xls`, `.csv`. Tamaño máximo: 20 MB.
+
+---
+
+## Variables de entorno
+
+Copiar `env` a `.env` y ajustar:
+
+```ini
+app.baseURL = 'http://localhost:8080/'
+
+database.default.hostname = db
+database.default.database = compatibilidades
+database.default.username = compat
+database.default.password = compat123
+database.default.DBDriver = MySQLi
+```
+
+---
+
+## Comandos útiles
+
+```bash
+# Ver rutas registradas
+docker compose exec app php spark route:list
+
+# Limpiar caché de vistas
+docker compose exec app php spark cache:clear
+
+# Reconstruir contenedor tras cambios en Dockerfile
+docker compose up -d --build app
+```
 
 ## Important Change with index.php
 
