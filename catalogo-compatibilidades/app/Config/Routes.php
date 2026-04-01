@@ -11,5 +11,29 @@ $routes->get('/', 'Home::index');
 $routes->get('/buscador', 'Search::index');
 $routes->get('/search',   'Search::results');
 
-// Confirmación de compatibilidad (HTMX POST)
+// ── CRUD Motocicletas ──────────────────────────────────────────
+$routes->get('/motos',                 'Motos::index');
+$routes->get('/motos/create',          'Motos::create');
+$routes->post('/motos/store',          'Motos::store');
+$routes->get('/motos/(:num)/edit',     'Motos::edit/$1');
+$routes->post('/motos/(:num)/update',  'Motos::update/$1');
+$routes->post('/motos/(:num)/delete',  'Motos::delete/$1');
+
+// ── CRUD Piezas Maestras ───────────────────────────────────────
+$routes->get('/piezas',                'Piezas::index');
+$routes->get('/piezas/create',         'Piezas::create');
+$routes->post('/piezas/store',         'Piezas::store');
+$routes->get('/piezas/(:num)/edit',    'Piezas::edit/$1');
+$routes->post('/piezas/(:num)/update', 'Piezas::update/$1');
+$routes->post('/piezas/(:num)/delete', 'Piezas::delete/$1');
+
+// ── CRUD Compatibilidades ──────────────────────────────────────
+$routes->get('/compatibilidades',                'Compatibilidades::index');
+$routes->get('/compatibilidades/create',         'Compatibilidades::create');
+$routes->post('/compatibilidades/store',         'Compatibilidades::store');
+$routes->get('/compatibilidades/(:num)/edit',    'Compatibilidades::edit/$1');
+$routes->post('/compatibilidades/(:num)/update', 'Compatibilidades::update/$1');
+$routes->post('/compatibilidades/(:num)/delete', 'Compatibilidades::delete/$1');
+
+// Confirmación desde Buscador (HTMX POST)
 $routes->post('/compatibilidades/(:num)/confirm', 'Search::confirm/$1');

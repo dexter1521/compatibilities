@@ -106,25 +106,42 @@
 
         <div class="sidemenu-body">
             <ul class="sidemenu-nav metisMenu h-100" id="sidemenu-nav" data-simplebar="">
-                <li class="nav-item-title">MVP</li>
-                <li class="nav-item">
+<?php $seg1 = service('uri')->getSegment(1); ?>
+                <li class="nav-item-title">Principal</li>
+                <li class="nav-item <?= $seg1 === '' ? 'mm-active' : '' ?>">
                     <a href="<?= site_url('/') ?>" class="nav-link">
                         <span class="icon"><i class='bx bx-home-circle'></i></span>
                         <span class="menu-title">Dashboard</span>
                     </a>
                 </li>
-                <li class="nav-item">
+                <li class="nav-item <?= $seg1 === 'buscador' ? 'mm-active' : '' ?>">
                     <a href="<?= site_url('/buscador') ?>" class="nav-link">
                         <span class="icon"><i class='bx bx-search-alt'></i></span>
                         <span class="menu-title">Buscador</span>
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link">
-                        <span class="icon"><i class='bx bx-cog'></i></span>
+
+                <li class="nav-item-title">Catálogo</li>
+                <li class="nav-item <?= $seg1 === 'motos' ? 'mm-active' : '' ?>">
+                    <a href="<?= site_url('/motos') ?>" class="nav-link">
+                        <span class="icon"><i class='bx bx-car'></i></span>
+                        <span class="menu-title">Motocicletas</span>
+                    </a>
+                </li>
+                <li class="nav-item <?= $seg1 === 'piezas' ? 'mm-active' : '' ?>">
+                    <a href="<?= site_url('/piezas') ?>" class="nav-link">
+                        <span class="icon"><i class='bx bx-wrench'></i></span>
+                        <span class="menu-title">Piezas Maestras</span>
+                    </a>
+                </li>
+                <li class="nav-item <?= $seg1 === 'compatibilidades' ? 'mm-active' : '' ?>">
+                    <a href="<?= site_url('/compatibilidades') ?>" class="nav-link">
+                        <span class="icon"><i class='bx bx-link-alt'></i></span>
                         <span class="menu-title">Compatibilidades</span>
                     </a>
                 </li>
+
+                <li class="nav-item-title">Importación</li>
                 <li class="nav-item">
                     <a href="#" class="nav-link">
                         <span class="icon"><i class='bx bx-upload'></i></span>
@@ -158,16 +175,22 @@
         </div>
     </div>
 
+    <!-- ── Modal Global CRUD ─────────────────────────────────────────── -->
+    <div class="modal fade" id="crud-modal" tabindex="-1" aria-hidden="true" aria-labelledby="crud-modal-label">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content" id="modal-content"></div>
+        </div>
+    </div>
+
     <script src="<?= base_url('fiva-assets/js/vendors.min.js') ?>"></script>
     <script src="<?= base_url('fiva-assets/js/custom.js') ?>"></script>
     <script src="https://cdn.jsdelivr.net/npm/htmx.org@1.9.12"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
     <script>
-        // Inyectar CSRF token en todas las peticiones HTMX (necesario para POST)
+        // ── CSRF ──────────────────────────────────────────────────────
         document.addEventListener('htmx:configRequest', function (e) {
             e.detail.headers['<?= csrf_header() ?>'] = '<?= csrf_hash() ?>';
         });
-        // Actualizar el token CSRF desde la respuesta HTMX (CI4 lo rota)
         document.addEventListener('htmx:afterRequest', function (e) {
             var newToken = e.detail.xhr.getResponseHeader('X-CSRF-TOKEN');
             if (newToken) {
@@ -175,6 +198,21 @@
                     el.value = newToken;
                 });
             }
+        });
+
+        // ── Modal CRUD: abrir cuando HTMX cargue contenido en #modal-content ──
+        document.addEventListener('htmx:afterSwap', function (evt) {
+            if (evt.target.id === 'modal-content' && evt.target.innerHTML.trim() !== '') {
+                $('#crud-modal').modal('show');
+            }
+        });
+        // Cerrar modal por header HX-Trigger: closeModal
+        document.addEventListener('closeModal', function () {
+            $('#crud-modal').modal('hide');
+        });
+        // Limpiar modal-content al cerrarse para evitar estado sucio
+        document.getElementById('crud-modal').addEventListener('hidden.bs.modal', function () {
+            document.getElementById('modal-content').innerHTML = '';
         });
     </script>
 </body>
