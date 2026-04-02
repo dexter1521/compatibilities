@@ -329,17 +329,20 @@ class ImportService
             return; // no romper flujo
         }
 
-        // 3. crear pieza_maestra
+        // 3. detectar rango de años desde la descripción original
+        [$anioDe, $anioHasta] = $this->detectarAnios($descripcion);
+
+        // 4. crear pieza_maestra
         $piezaId = $this->getOrCreatePiezaMaestra($tipo, $motos[0]);
 
-        // 4. asignar producto
+        // 5. asignar producto
         $this->db->table('productos')
             ->where('id', $productoId)
             ->update(['pieza_maestra_id' => $piezaId]);
 
-        // 5. compatibilidades
+        // 6. compatibilidades
         foreach ($motos as $motoId) {
-            $this->upsertCompatibilidad($piezaId, $motoId);
+            $this->upsertCompatibilidad($piezaId, $motoId, $anioDe, $anioHasta);
         }
     }
 
@@ -423,7 +426,7 @@ class ImportService
         return (int) $this->db->insertID();
     }
 
-    private function upsertCompatibilidad(int $piezaId, int $motoId): void
+    private function upsertCompatibilidad(int $piezaId, int $motoId, ?int $anioDe = null, ?int $anioHasta = null): void
     {
         $exists = $this->db->table('compatibilidades')
             ->where('pieza_maestra_id', $piezaId)
@@ -434,11 +437,53 @@ class ImportService
             $this->db->table('compatibilidades')->insert([
                 'pieza_maestra_id'        => $piezaId,
                 'motocicleta_id'          => $motoId,
+                'anio_desde'              => $anioDe,
+                'anio_hasta'              => $anioHasta,
                 'confirmada'              => 0,
                 'contador_confirmaciones' => 0,
                 'created_at'              => date('Y-m-d H:i:s'),
                 'updated_at'              => date('Y-m-d H:i:s'),
             ]);
+        } elseif ($anioDe !== null || $anioHasta !== null) {
+            // Actualizar años si el registro ya existía sin ellos
+            $this->db->table('compatibilidades')
+                ->where('pieza_maestra_id', $piezaId)
+                ->where('motocicleta_id', $motoId)
+                ->where('anio_desde IS NULL')
+                ->update([
+                    'anio_desde' => $anioDe,
+                    'anio_hasta' => $anioHasta,
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ]);
         }
+    }
+
+    /**
+     * Extrae rango de años desde patrones como (06/13), (2006/13), (14), (2006/2013).
+     * Los años de 2 dígitos se expanden a 20xx (contexto: motos 2000-2030).
+     *
+     * @return array{0: int|null, 1: int|null}  [anio_desde, anio_hasta]
+     */
+    private function detectarAnios(string $desc): array
+    {
+        // Patrón: (DD/DD), (DDDD/DD), (DD/DDDD), (DDDD/DDDD), (DD), (DDDD)
+        if (!preg_match('/\((\d{2,4})(?:\/(\d{2,4}))?\)/', $desc, $m)) {
+            return [null, null];
+        }
+
+        $expand = static function (string $y): int {
+            $n = (int) $y;
+            return strlen($y) === 2 ? 2000 + $n : $n;
+        };
+
+        $desde = $expand($m[1]);
+        $hasta = isset($m[2]) ? $expand($m[2]) : $desde;
+
+        // Sanidad: rango razonable para motos
+        if ($desde < 1980 || $desde > 2040 || $hasta < $desde) {
+            return [null, null];
+        }
+
+        return [$desde, $hasta];
     }
 }
