@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="es">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -11,12 +12,13 @@
     <title><?= esc($title ?? 'Compatibilidades') ?></title>
     <link rel="icon" type="image/png" href="<?= base_url('favicon.png') ?>">
 </head>
+
 <body>
     <div class="sidemenu-area">
         <div class="sidemenu-header">
             <a href="<?= site_url('/') ?>" class="navbar-brand d-flex align-items-center">
                 <img src="<?= base_url('fiva-assets/img/small-logo.png') ?>" alt="logo">
-                <span>Compatibilidades</span>
+                <span>Sharks Motors</span>
             </a>
 
             <div class="burger-menu d-none d-lg-block">
@@ -34,7 +36,7 @@
 
         <div class="sidemenu-body">
             <ul class="sidemenu-nav metisMenu h-100" id="sidemenu-nav" data-simplebar="">
-<?php $seg1 = service('uri')->getSegment(1); ?>
+                <?php $seg1 = service('uri')->getSegment(1); ?>
                 <li class="nav-item-title">Principal</li>
                 <li class="nav-item <?= $seg1 === '' ? 'mm-active' : '' ?>">
                     <a href="<?= site_url('/') ?>" class="nav-link">
@@ -115,11 +117,12 @@
     <script src="https://cdn.jsdelivr.net/npm/htmx.org@1.9.12"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
     <script>
-        // ── CSRF ──────────────────────────────────────────────────────
-        document.addEventListener('htmx:configRequest', function (e) {
+        // ── CSRF + marcar como AJAX para que CI4 omita DebugToolbar ──
+        document.addEventListener('htmx:configRequest', function(e) {
             e.detail.headers['<?= csrf_header() ?>'] = '<?= csrf_hash() ?>';
+            e.detail.headers['X-Requested-With'] = 'XMLHttpRequest';
         });
-        document.addEventListener('htmx:afterRequest', function (e) {
+        document.addEventListener('htmx:afterRequest', function(e) {
             var newToken = e.detail.xhr.getResponseHeader('X-CSRF-TOKEN');
             if (newToken) {
                 document.querySelectorAll('input[name="<?= csrf_field() ?>"]').forEach(function(el) {
@@ -129,19 +132,20 @@
         });
 
         // ── Modal CRUD: abrir cuando HTMX cargue contenido en #modal-content ──
-        document.addEventListener('htmx:afterSwap', function (evt) {
+        document.addEventListener('htmx:afterSwap', function(evt) {
             if (evt.target.id === 'modal-content' && evt.target.innerHTML.trim() !== '') {
                 $('#crud-modal').modal('show');
             }
         });
         // Cerrar modal por header HX-Trigger: closeModal
-        document.addEventListener('closeModal', function () {
+        document.addEventListener('closeModal', function() {
             $('#crud-modal').modal('hide');
         });
         // Limpiar modal-content al cerrarse para evitar estado sucio
-        document.getElementById('crud-modal').addEventListener('hidden.bs.modal', function () {
+        document.getElementById('crud-modal').addEventListener('hidden.bs.modal', function() {
             document.getElementById('modal-content').innerHTML = '';
         });
     </script>
 </body>
+
 </html>
