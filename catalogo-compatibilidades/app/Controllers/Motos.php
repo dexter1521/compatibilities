@@ -18,6 +18,10 @@ class Motos extends BaseAdminController
 
     // ── Listado ────────────────────────────────────────────────
 
+    /**
+     * GET /motos
+     * Lista todas las motocicletas con su marca.
+     */
     public function index(): string
     {
         return view('motos/index', [
@@ -29,6 +33,11 @@ class Motos extends BaseAdminController
 
     // ── Crear ──────────────────────────────────────────────────
 
+    /**
+     * GET /motos/create
+     * Muestra el formulario para crear una nueva motocicleta.
+     * Permite seleccionar una marca existente o escribir una nueva.
+     */
     public function create(): string
     {
         return view('motos/_form', [
@@ -39,6 +48,11 @@ class Motos extends BaseAdminController
         ]);
     }
 
+    /**
+     * POST /motos
+     * Valida y persiste una nueva motocicleta.
+     * Si marca_id es 0 y se proporcionó marca_nombre, crea la marca en el mismo request.
+     */
     public function store()
     {
         $post = $this->request->getPost();
@@ -101,6 +115,12 @@ class Motos extends BaseAdminController
 
     // ── Editar ─────────────────────────────────────────────────
 
+    /**
+     * GET /motos/{id}/edit
+     * Muestra el formulario precargado con los datos de la motocicleta.
+     *
+     * @param int $id ID de la motocicleta
+     */
     public function edit(int $id): string
     {
         $moto = $this->motoModel->getWithMarca($id);
@@ -122,6 +142,12 @@ class Motos extends BaseAdminController
         ]);
     }
 
+    /**
+     * PUT /motos/{id}
+     * Valida y actualiza los datos de la motocicleta.
+     *
+     * @param int $id ID de la motocicleta
+     */
     public function update(int $id)
     {
         $post = $this->request->getPost();
@@ -166,6 +192,12 @@ class Motos extends BaseAdminController
 
     // ── Eliminar ───────────────────────────────────────────────
 
+    /**
+     * DELETE /motos/{id}
+     * Elimina la motocicleta y devuelve el partial HTML actualizado (HTMX swap).
+     *
+     * @param int $id ID de la motocicleta
+     */
     public function delete(int $id)
     {
         $this->motoModel->delete($id);

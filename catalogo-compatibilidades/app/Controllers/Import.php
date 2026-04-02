@@ -9,6 +9,10 @@ class Import extends BaseController
 {
     // ── Página principal ───────────────────────────────────────
 
+    /**
+     * GET /import
+     * Muestra el formulario de importación y el historial de los últimos 20 jobs.
+     */
     public function index(): string
     {
         $db   = \Config\Database::connect();
@@ -27,6 +31,11 @@ class Import extends BaseController
 
     // ── Subir y procesar ───────────────────────────────────────
 
+    /**
+     * POST /import/upload
+     * Recibe el archivo subido, delega en ImportService::run() y redirige con flashdata.
+     * El archivo se convierte de CIFile a array nativo antes de pasarse al servicio.
+     */
     public function upload()
     {
         $file = $this->request->getFile('archivo');
@@ -67,6 +76,12 @@ class Import extends BaseController
 
     // ── Detalle de un job (HTMX partial) ──────────────────────
 
+    /**
+     * GET /import/job/{id}
+     * Endpoint HTMX: devuelve el partial HTML con el detalle del job y sus items.
+     *
+     * @param int $id ID del import_job
+     */
     public function jobDetail(int $id): ResponseInterface
     {
         $db  = \Config\Database::connect();

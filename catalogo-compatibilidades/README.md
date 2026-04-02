@@ -30,30 +30,37 @@ docker compose ps
 
 La app queda disponible en **http://localhost:8080**
 
+> Tras cambios en el `Dockerfile` o dependencias ejecutar:
+> ```bash
+> docker compose up -d --build app
+> ```
+
 ---
 
 ## Primera vez (migraciones + datos de demo)
 
 ```bash
-# Migraciones
+# 1. Ejecutar migraciones
 docker compose exec app php spark migrate
 
-# Seed de demostración (motos, piezas, compatibilidades, productos)
+# 2. Seed de demostración (motos, piezas, compatibilidades, productos)
 docker compose exec app php spark db:seed DemoSeeder
 ```
+
+Para poblar el catálogo real de motocicletas y aliases ver la sección [Catálogo de datos](#catálogo-de-datos).
 
 ---
 
 ## Módulos
 
-| Ruta | Descripción |
-|---|---|
-| `/` | Dashboard con KPIs y buscador rápido |
-| `/buscador` | Buscador principal por mostrador |
-| `/motos` | CRUD de marcas y motocicletas |
-| `/piezas` | CRUD de piezas maestras |
-| `/compatibilidades` | CRUD de relaciones pieza ↔ moto |
-| `/import` | Importador de Excel/CSV desde MyBusiness |
+| Ruta | Controlador | Descripción |
+|---|---|---|
+| `/` | `Home` | Dashboard con KPIs y buscador rápido |
+| `/buscador` | `Search` | Buscador principal por mostrador |
+| `/motos` | `Motos` | CRUD de marcas y motocicletas |
+| `/piezas` | `Piezas` | CRUD de piezas maestras |
+| `/compatibilidades` | `Compatibilidades` | CRUD de relaciones pieza ↔ moto |
+| `/import` | `Import` | Importador de Excel/CSV desde MyBusiness |
 
 ---
 
@@ -65,9 +72,68 @@ El archivo debe tener columnas (el orden no importa, se detectan por nombre):
 |---|---|
 | `proveedor` | Nombre del proveedor (ej. REMSA) |
 | `clave_proveedor` | Clave del POS (ej. BD-HFT150) |
-| `nombre` | Descripción del producto |
+| `nombre` | Descripción del producto (ej. "Bujía FT150") |
 
 Formatos soportados: `.xlsx`, `.xls`, `.csv`. Tamaño máximo: 20 MB.
+
+Tras importar, el servicio ejecuta automáticamente el pipeline de enriquecimiento — ver la siguiente sección.
+
+---
+
+## Pipeline de enriquecimiento automático (`ImportService`)
+
+Después de hacer upsert de cada producto, `ImportService::enrichProducto()` analiza la descripción y:
+
+1. **Detecta motocicletas** — `detectarMotos()` normaliza la descripción (mayúsculas, quita guiones) y busca coincidencias contra todos los registros de la tabla `alias_motos` usando `str_contains`. Si encuentra una o más motos, continúa.
+
+2. **Detecta tipo de pieza** — `detectarTipo()` itera la propiedad `$mapTipos` (tipo → keywords[]) de más específico a más genérico. Ejemplo: `'FILTRO DE ACEITE'` se evalúa antes que `'ACEITE'`.
+
+3. **Crea o reutiliza una `pieza_maestra`** — `getOrCreatePiezaMaestra()` hace upsert por `nombre` en la tabla `piezas_maestras`.
+
+4. **Asigna `pieza_maestra_id`** al producto en la tabla `productos`.
+
+5. **Crea registros en `compatibilidades`** — uno por cada motocicleta detectada (si el par pieza–moto no existe ya).
+
+Si no se detecta tipo **o** no se detecta ninguna moto, el producto se importa sin enriquecer (no falla el job).
+
+### Ampliar el mapa de tipos
+
+Editar la propiedad `$mapTipos` en `app/Services/ImportService.php`:
+
+```php
+private array $mapTipos = [
+    'Mi Nuevo Tipo' => ['KEYWORD1', 'KEYWORD DOS'],
+    // ...
+];
+```
+
+Las keywords se normalizan automáticamente antes de comparar, por lo que no es necesario manejar variaciones de mayúsculas/minúsculas ni guiones.
+
+---
+
+## Catálogo de datos
+
+### Marcas y motocicletas
+
+El catálogo de motocicletas se pobla directamente en DB. Para replicar el entorno ejecutar los INSERTs del directorio `docs/seeds/` (en construcción) o correr el DemoSeeder y completar manualmente.
+
+Marcas actuales: **Honda, Yamaha, Italika, TVS, Vento, Suzuki, Bajaj**.
+
+### Agregar aliases a una motocicleta
+
+Los aliases son las cadenas que `detectarMotos()` busca en las descripciones de productos importados.
+
+```sql
+INSERT INTO alias_motos (motocicleta_id, alias, slug) VALUES
+( (SELECT id FROM motocicletas WHERE slug='italika-ft150'), 'FT150',  'ft150'),
+( (SELECT id FROM motocicletas WHERE slug='italika-ft150'), 'FT 150', 'ft-150');
+```
+
+Conviene agregar variantes: con espacio, con guión, con nombre de marca prefijado.
+
+### Tipos de pieza (`tipos_pieza`)
+
+Catálogo de referencia de 33 tipos de pieza (bujía, filtros, balatas, etc.). Usado actualmente como referencia; la detección de tipo en el pipeline usa `$mapTipos` en `ImportService`, no esta tabla directamente.
 
 ---
 
@@ -96,28 +162,12 @@ docker compose exec app php spark route:list
 # Limpiar caché de vistas
 docker compose exec app php spark cache:clear
 
+# Acceso directo a MariaDB
+docker exec compat_db mariadb -u compat -pcompat123 compatibilidades
+
 # Reconstruir contenedor tras cambios en Dockerfile
 docker compose up -d --build app
 ```
-
-## Important Change with index.php
-
-`index.php` is no longer in the root of the project! It has been moved inside the *public* folder,
-for better security and separation of components.
-
-This means that you should configure your web server to "point" to your project's *public* folder, and
-not to the project root. A better practice would be to configure a virtual host to point there. A poor practice would be to point your web server to the project root and expect to enter *public/...*, as the rest of your logic and the
-framework are exposed.
-
-**Please** read the user guide for a better explanation of how CI4 works!
-
-## Repository Management
-
-We use GitHub issues, in our main repository, to track **BUGS** and to track approved **DEVELOPMENT** work packages.
-We use our [forum](http://forum.codeigniter.com) to provide SUPPORT and to discuss
-FEATURE REQUESTS.
-
-This repository is a "distribution" one, built by our release preparation script.
 Problems with it can be raised on our forum, or as issues in the main repository.
 
 ## Server Requirements

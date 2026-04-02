@@ -21,6 +21,10 @@ class Compatibilidades extends BaseAdminController
 
     // ── Listado ────────────────────────────────────────────────
 
+    /**
+     * GET /compatibilidades
+     * Lista todas las relaciones pieza–moto con detalle completo.
+     */
     public function index(): string
     {
         return view('compatibilidades/index', [
@@ -32,6 +36,10 @@ class Compatibilidades extends BaseAdminController
 
     // ── Crear ──────────────────────────────────────────────────
 
+    /**
+     * GET /compatibilidades/create
+     * Muestra el formulario para crear una nueva compatibilidad pieza–moto.
+     */
     public function create(): string
     {
         return view('compatibilidades/_form', [
@@ -43,6 +51,11 @@ class Compatibilidades extends BaseAdminController
         ]);
     }
 
+    /**
+     * POST /compatibilidades
+     * Valida y persiste una nueva compatibilidad pieza–moto.
+     * Rechaza el par si ya existe en la tabla (restricción de unicidad).
+     */
     public function store()
     {
         $post = $this->request->getPost();
@@ -89,6 +102,12 @@ class Compatibilidades extends BaseAdminController
 
     // ── Editar ─────────────────────────────────────────────────
 
+    /**
+     * GET /compatibilidades/{id}/edit
+     * Muestra el formulario precargado con los datos de la compatibilidad.
+     *
+     * @param int $id ID de la compatibilidad
+     */
     public function edit(int $id): string
     {
         $compat = $this->model->find($id);
@@ -102,18 +121,14 @@ class Compatibilidades extends BaseAdminController
         ]);
     }
 
+    /**
+     * PUT /compatibilidades/{id}
+     * Valida y actualiza la relación pieza–moto.
+     * Rechaza si el nuevo par ya existe en otro registro.
+     *
+     * @param int $id ID de la compatibilidad
+     */
     public function update(int $id)
-    {
-        $post = $this->request->getPost();
-
-        if (!$this->validate([
-            'pieza_maestra_id' => 'required|is_natural_no_zero',
-            'motocicleta_id'   => 'required|is_natural_no_zero',
-        ])) {
-            return view('compatibilidades/_form', [
-                'compat' => $this->model->find($id),
-                'piezas' => $this->piezaModel->orderBy('nombre')->findAll(),
-                'motos'  => $this->motoModel->getAllWithMarca(),
                 'errors' => $this->validator->getErrors(),
                 'old'    => $post,
             ]);
@@ -147,6 +162,12 @@ class Compatibilidades extends BaseAdminController
 
     // ── Eliminar ───────────────────────────────────────────────
 
+    /**
+     * DELETE /compatibilidades/{id}
+     * Elimina la compatibilidad y devuelve el partial HTML actualizado (HTMX swap).
+     *
+     * @param int $id ID de la compatibilidad
+     */
     public function delete(int $id)
     {
         $this->model->delete($id);

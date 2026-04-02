@@ -15,6 +15,10 @@ class Piezas extends BaseAdminController
 
     // ── Listado ────────────────────────────────────────────────
 
+    /**
+     * GET /piezas
+     * Lista todas las piezas maestras ordenadas por nombre.
+     */
     public function index(): string
     {
         return view('piezas/index', [
@@ -26,6 +30,10 @@ class Piezas extends BaseAdminController
 
     // ── Crear ──────────────────────────────────────────────────
 
+    /**
+     * GET /piezas/create
+     * Muestra el formulario para crear una nueva pieza maestra.
+     */
     public function create(): string
     {
         return view('piezas/_form', [
@@ -35,6 +43,11 @@ class Piezas extends BaseAdminController
         ]);
     }
 
+    /**
+     * POST /piezas
+     * Valida y persiste una nueva pieza maestra.
+     * El nombre debe ser único en la tabla piezas_maestras.
+     */
     public function store()
     {
         $post = $this->request->getPost();
@@ -57,6 +70,12 @@ class Piezas extends BaseAdminController
 
     // ── Editar ─────────────────────────────────────────────────
 
+    /**
+     * GET /piezas/{id}/edit
+     * Muestra el formulario precargado con los datos de la pieza maestra.
+     *
+     * @param int $id ID de la pieza maestra
+     */
     public function edit(int $id): string
     {
         $pieza = $this->model->find($id);
@@ -68,6 +87,12 @@ class Piezas extends BaseAdminController
         ]);
     }
 
+    /**
+     * PUT /piezas/{id}
+     * Valida y actualiza el nombre de la pieza maestra.
+     *
+     * @param int $id ID de la pieza maestra
+     */
     public function update(int $id)
     {
         $post = $this->request->getPost();
@@ -90,6 +115,12 @@ class Piezas extends BaseAdminController
 
     // ── Eliminar ───────────────────────────────────────────────
 
+    /**
+     * DELETE /piezas/{id}
+     * Elimina la pieza maestra y devuelve el partial HTML actualizado (HTMX swap).
+     *
+     * @param int $id ID de la pieza maestra
+     */
     public function delete(int $id)
     {
         $this->model->delete($id);
