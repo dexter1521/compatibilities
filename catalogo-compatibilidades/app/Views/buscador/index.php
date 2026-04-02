@@ -5,12 +5,12 @@
 <style>
     /* ── Variables locales ───────────────────────────────────────── */
     :root {
-        --sh-orange: #F97316;
-        --sh-orange-dark: #C2540A;
-        --sh-dark-bg: #0E1117;
-        --sh-dark-card: #161B26;
-        --sh-dark-border: rgba(255, 255, 255, .08);
-        --sh-dark-muted: rgba(255, 255, 255, .45);
+        --sh-orange:       #F97316;
+        --sh-orange-dark:  #C2540A;
+        --sh-dark-bg:      #0E1117;
+        --sh-dark-card:    #161B26;
+        --sh-dark-border:  rgba(255, 255, 255, .30); /* subido de .08 → borde visible */
+        --sh-dark-muted:   #B0BAC8;                  /* ~7:1 sobre #0E1117 — antes .45 opacity (~4.7:1) */
     }
 
     /* ── Hero ───────────────────────────────────────────────────── */
@@ -90,8 +90,8 @@
     }
 
     .search-subtitle {
-        font-size: 13.5px;
-        color: var(--sh-dark-muted);
+        font-size: 14px;           /* +0.5px para legibilidad */
+        color: var(--sh-dark-muted); /* #B0BAC8 ~7:1 */
         margin-bottom: 0;
         max-width: 460px;
     }
@@ -112,9 +112,9 @@
         align-items: center;
         gap: 7px;
         padding: 8px 20px;
-        font-size: 12.5px;
+        font-size: 13px;           /* +0.5px para legibilidad */
         font-weight: 600;
-        color: var(--sh-dark-muted);
+        color: var(--sh-dark-muted); /* #B0BAC8 ~7:1 */
         background: transparent;
         border: none;
         border-radius: 8px;
@@ -162,7 +162,7 @@
     }
 
     .search-input-wrap .form-control::placeholder {
-        color: rgba(255, 255, 255, .28);
+        color: #7C8899; /* ~4.6:1 sobre bg oscuro — antes .28 opacity (~2.3:1) */
     }
 
     .search-input-wrap .form-control:focus {
@@ -190,8 +190,8 @@
     }
 
     .search-tip {
-        font-size: 11.5px;
-        color: rgba(255, 255, 255, .25);
+        font-size: 13px;   /* aumentado de 11.5px — muy pequeño para mayores */
+        color: #8A95A5;    /* ~5.5:1 sobre #0E1117 — antes .25 opacity (~2.2:1, fail WCAG) */
         margin-top: 9px;
         display: flex;
         flex-wrap: wrap;
@@ -227,22 +227,22 @@
 
     .cascade-field label {
         display: block;
-        font-size: 10.5px;
+        font-size: 12px;   /* aumentado de 10.5px — 10.5px es ilegible para mayores */
         font-weight: 700;
-        color: rgba(255, 255, 255, .4);
+        color: #A0AABB;    /* ~6:1 sobre #0E1117 — antes .4 opacity (~4:1, fail WCAG AA small) */
         text-transform: uppercase;
-        letter-spacing: .6px;
+        letter-spacing: .5px;
         margin-bottom: 6px;
     }
 
     .cascade-field select {
         width: 100%;
         padding: 11px 36px 11px 14px;
-        font-size: 13.5px;
+        font-size: 15px;   /* aumentado de 13.5px para personas mayores */
         font-weight: 500;
-        border: 2px solid var(--sh-dark-border);
+        border: 2px solid var(--sh-dark-border); /* ahora .30 opacity — borde visible */
         border-radius: 10px;
-        background-color: rgba(255, 255, 255, .06);
+        background-color: rgba(255, 255, 255, .08);
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(249%2C115%2C22%2C.8)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
         background-repeat: no-repeat;
         background-position: right 12px center;
@@ -279,8 +279,8 @@
     /* ── Indicador de búsqueda activa ───────────────────────────── */
     .cascade-loading {
         display: none;
-        font-size: 12px;
-        color: var(--sh-dark-muted);
+        font-size: 14px;  /* aumentado */
+        color: var(--sh-dark-muted); /* #B0BAC8 ~7:1 */
         align-items: center;
         gap: 8px;
         margin-top: 12px;
