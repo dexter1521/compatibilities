@@ -354,7 +354,7 @@ class ImportService
             if ($needle === '') {
                 continue;
             }
-            $pattern = '/\b' . preg_quote($needle, '/') . '\b/i';
+            $pattern = '/' . preg_quote($needle, '/') . '/i';
             if (preg_match($pattern, $desc)) {
                 $motoId = (int) $a['motocicleta_id'];
                 if (!in_array($motoId, $found, true)) {
