@@ -343,40 +343,23 @@ class ImportService
     /** @return int[] lista de motocicleta_id detectados en la descripción */
     private function detectarMotos(string $desc): array
     {
-        $desc  = $this->normalize($desc);
         $found = [];
+        $desc  = $this->normalize($desc);
 
-        // Primero buscar por alias (tokens cortos y únicos por diseño)
-        $aliases = $this->getAliases();
+        foreach ($this->getAliases() as $a) {
 
-        foreach ($aliases as $a) {
             $needle = $this->normalize($a['alias']);
+
             if ($needle === '') {
                 continue;
             }
-            $pattern = '/' . preg_quote($needle, '/') . '/i';
-            if (preg_match($pattern, $desc)) {
+
+            if (str_contains($desc, $needle)) {
+
                 $motoId = (int) $a['motocicleta_id'];
+
                 if (!in_array($motoId, $found, true)) {
                     $found[] = $motoId;
-                }
-            }
-        }
-
-        // Si no hubo matches por alias, intentar con marca + modelo
-        if (empty($found)) {
-            $motos = $this->db->table('motocicletas m')
-                ->select('m.id, m.modelo, ma.nombre AS marca')
-                ->join('marcas ma', 'ma.id = m.marca_id')
-                ->get()->getResultArray();
-
-            foreach ($motos as $m) {
-                $search = $this->normalize($m['marca'] . ' ' . $m['modelo']);
-                if ($search !== '' && str_contains($desc, $search)) {
-                    $motoId = (int) $m['id'];
-                    if (!in_array($motoId, $found, true)) {
-                        $found[] = $motoId;
-                    }
                 }
             }
         }
