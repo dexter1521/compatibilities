@@ -4,84 +4,17 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="<?= base_url('fiva-assets/css/vendors.min.css') ?>">
     <link rel="stylesheet" href="<?= base_url('fiva-assets/css/style.css') ?>">
     <link rel="stylesheet" href="<?= base_url('fiva-assets/css/responsive.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('fiva-assets/css/compat-dark.css') ?>">
 
     <title><?= esc($title ?? 'Compatibilidades') ?></title>
     <link rel="icon" type="image/png" href="<?= base_url('favicon.png') ?>">
-
-    <style>
-        :root {
-            --compat-accent: #f97316;
-            --compat-accent-dark: #ea580c;
-            --compat-ink: #111827;
-        }
-
-        .compat-hero {
-            background: radial-gradient(circle at 15% 20%, rgba(249, 115, 22, 0.15), transparent 45%),
-                        radial-gradient(circle at 80% 0%, rgba(14, 116, 144, 0.2), transparent 40%),
-                        #ffffff;
-            border: 1px solid rgba(17, 24, 39, 0.06);
-            border-radius: 14px;
-            padding: 28px;
-            margin-bottom: 24px;
-        }
-
-        .compat-hero h1 {
-            color: var(--compat-ink);
-            letter-spacing: 0.2px;
-            margin-bottom: 10px;
-        }
-
-        .compat-hero p {
-            max-width: 720px;
-            color: #4b5563;
-            margin-bottom: 0;
-        }
-
-        .compat-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            background: rgba(249, 115, 22, 0.12);
-            color: var(--compat-accent-dark);
-            border: 1px solid rgba(249, 115, 22, 0.35);
-            border-radius: 999px;
-            padding: 7px 12px;
-            font-size: 12px;
-            font-weight: 600;
-            margin-bottom: 14px;
-        }
-
-        .compat-kpi .card-header {
-            border-bottom: 1px solid rgba(17, 24, 39, 0.08);
-        }
-
-        .compat-kpi .card-header h3 {
-            font-size: 16px;
-        }
-
-        .compat-kpi .card-body h2 {
-            color: var(--compat-ink);
-            margin-bottom: 6px;
-        }
-
-        .compat-kpi .trend {
-            color: var(--compat-accent-dark);
-            font-weight: 600;
-            font-size: 13px;
-        }
-
-        .compat-quick-search .btn {
-            background: linear-gradient(135deg, var(--compat-accent), var(--compat-accent-dark));
-            border: 0;
-        }
-
-        .compat-quick-search .btn:hover {
-            filter: brightness(0.98);
-        }
-    </style>
 </head>
 <body>
     <div class="sidemenu-area">

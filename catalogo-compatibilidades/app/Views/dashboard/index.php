@@ -1,196 +1,183 @@
-<?= $this->extend('layouts/fiva') ?>
+﻿<?= $this->extend('layouts/fiva') ?>
 
 <?= $this->section('content') ?>
 
-<!-- KPI Row 1 -->
-<div class="row compat-kpi">
-    <div class="col-lg-2 col-md-4 col-sm-6">
-        <div class="card mb-30">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h3>Motos</h3><i class='bx bx-motorcycle'></i>
-            </div>
-            <div class="card-body">
-                <h2><?= esc((string) ($kpis['motos'] ?? 0)) ?></h2>
-                <span class="trend">registradas</span>
-            </div>
+<!-- â”€â”€ KPI Row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div class="row" style="margin-bottom:4px;">
+
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+        <div class="kpi-panel">
+            <span class="kpi-label">Motocicletas</span>
+            <span class="kpi-number"><?= $kpis['motos'] ?? 0 ?></span>
+            <span class="kpi-sub">registradas</span>
+            <i class='bx bx-street-view kpi-icon-bg'></i>
         </div>
     </div>
-    <div class="col-lg-2 col-md-4 col-sm-6">
-        <div class="card mb-30">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h3>Piezas</h3><i class='bx bx-cog'></i>
-            </div>
-            <div class="card-body">
-                <h2><?= esc((string) ($kpis['piezas'] ?? 0)) ?></h2>
-                <span class="trend">maestras</span>
-            </div>
+
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+        <div class="kpi-panel">
+            <span class="kpi-label">Piezas</span>
+            <span class="kpi-number"><?= $kpis['piezas'] ?? 0 ?></span>
+            <span class="kpi-sub">maestras</span>
+            <i class='bx bx-chip kpi-icon-bg'></i>
         </div>
     </div>
-    <div class="col-lg-2 col-md-4 col-sm-6">
-        <div class="card mb-30">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h3>Compats.</h3><i class='bx bx-link-alt'></i>
-            </div>
-            <div class="card-body">
-                <h2><?= esc((string) ($kpis['compatibilidades'] ?? 0)) ?></h2>
-                <span class="trend">relaciones</span>
-            </div>
+
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+        <div class="kpi-panel kpi-accent">
+            <span class="kpi-label">Compatibilidades</span>
+            <span class="kpi-number num-accent"><?= $kpis['compatibilidades'] ?? 0 ?></span>
+            <span class="kpi-sub">relaciones</span>
+            <i class='bx bx-link kpi-icon-bg'></i>
         </div>
     </div>
-    <div class="col-lg-2 col-md-4 col-sm-6">
-        <div class="card mb-30">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h3>Confirmadas</h3><i class='bx bx-check-shield'></i>
-            </div>
-            <div class="card-body">
-                <h2 style="color:var(--compat-accent);"><?= esc((string) ($kpis['confirmadas'] ?? 0)) ?></h2>
-                <span class="trend">verificadas</span>
-            </div>
+
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+        <div class="kpi-panel kpi-confirm">
+            <span class="kpi-label">Confirmadas</span>
+            <span class="kpi-number num-confirm"><?= $kpis['confirmadas'] ?? 0 ?></span>
+            <span class="kpi-sub">verificadas</span>
+            <i class='bx bx-check-shield kpi-icon-bg'></i>
         </div>
     </div>
-    <div class="col-lg-2 col-md-4 col-sm-6">
-        <div class="card mb-30">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h3>Productos</h3><i class='bx bx-package'></i>
-            </div>
-            <div class="card-body">
-                <h2><?= esc((string) ($kpis['productos'] ?? 0)) ?></h2>
-                <span class="trend">con clave</span>
-            </div>
+
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+        <div class="kpi-panel">
+            <span class="kpi-label">Productos</span>
+            <span class="kpi-number"><?= $kpis['productos'] ?? 0 ?></span>
+            <span class="kpi-sub">con clave</span>
+            <i class='bx bx-barcode kpi-icon-bg'></i>
         </div>
     </div>
-    <div class="col-lg-2 col-md-4 col-sm-6">
-        <div class="card mb-30">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h3>Sin resultado</h3><i class='bx bx-search-alt'></i>
-            </div>
-            <div class="card-body">
-                <h2 style="color:#dc2626;"><?= esc((string) ($kpis['busquedas_miss'] ?? 0)) ?></h2>
-                <span class="trend">búsquedas</span>
-            </div>
+
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+        <div class="kpi-panel kpi-alert">
+            <span class="kpi-label">Sin resultado</span>
+            <span class="kpi-number num-alert"><?= $kpis['busquedas_miss'] ?? 0 ?></span>
+            <span class="kpi-sub">bÃºsquedas</span>
+            <i class='bx bx-error kpi-icon-bg'></i>
         </div>
     </div>
+
 </div>
 
-<!-- Segunda fila: buscador rápido + tablas -->
+<!-- â”€â”€ Segunda fila â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
 <div class="row">
 
-    <!-- Buscador rápido -->
-    <div class="col-lg-8">
-        <div class="card mb-30 compat-quick-search" x-data="{ q: '' }">
-            <div class="card-header">
-                <h3><i class='bx bx-search' style="color:var(--compat-accent);margin-right:6px;"></i>Buscador rápido</h3>
-            </div>
-            <div class="card-body">
-                <form class="row" hx-get="<?= site_url('/search') ?>" hx-target="#searchPreview" hx-swap="innerHTML">
-                    <div class="col-lg-9 col-md-8 mb-2 mb-md-0">
-                        <input
-                            name="q"
-                            type="text"
-                            class="form-control"
-                            placeholder="Ejemplo: balata ft150, filtro cgl, bujia fz"
-                            x-model="q"
-                            autocomplete="off"
-                        >
-                    </div>
-                    <div class="col-lg-3 col-md-4">
-                        <button class="btn btn-primary btn-block" type="submit" :disabled="q.trim().length < 2">Buscar</button>
-                    </div>
-                </form>
-                <div id="searchPreview" class="mt-3 text-muted" style="font-size:13px;">
-                    Escribe al menos 2 caracteres y presiona Buscar.
-                </div>
+    <!-- Columna izquierda: buscador + imports -->
+    <div class="col-lg-8 mb-3">
+
+        <!-- Buscador rÃ¡pido -->
+        <div class="dk-search-panel mb-3" x-data="{ q: '' }">
+            <span class="dk-search-eyebrow">// bÃºsqueda rÃ¡pida</span>
+            <form class="d-flex gap-2" style="gap:8px;display:flex;" hx-get="<?= site_url('/search') ?>" hx-target="#searchPreview" hx-swap="innerHTML">
+                <input
+                    name="q"
+                    type="text"
+                    class="form-control flex-grow-1"
+                    placeholder="balata ft150   Â·   filtro cgl   Â·   bujia fz150"
+                    x-model="q"
+                    autocomplete="off"
+                    style="flex:1;"
+                >
+                <button class="btn btn-primary px-4" type="submit" :disabled="q.trim().length < 2"
+                    style="white-space:nowrap;flex-shrink:0;">
+                    Buscar
+                </button>
+            </form>
+            <div id="searchPreview" class="mt-3" style="font-family:var(--font-mono);font-size:12px;color:var(--dk-text-3);">
+                _
             </div>
         </div>
 
-        <!-- Últimos imports -->
-        <div class="card mb-30">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h3><i class='bx bx-upload' style="color:var(--compat-accent);margin-right:6px;"></i>Últimas importaciones</h3>
-                <a href="<?= site_url('/import') ?>" class="btn btn-sm" style="background:rgba(249,115,22,.1);color:var(--compat-accent);font-size:12px;font-weight:700;border-radius:8px;padding:4px 12px;">Ver todo</a>
+        <!-- Ãšltimas importaciones -->
+        <div style="background:var(--dk-surface);border:1px solid var(--dk-border);border-radius:8px;overflow:hidden;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--dk-border);">
+                <span style="font-family:var(--font-display);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:var(--dk-text);">
+                    <i class='bx bx-upload' style="color:var(--dk-accent);margin-right:6px;"></i>Importaciones
+                </span>
+                <a href="<?= site_url('/import') ?>" style="font-family:var(--font-mono);font-size:10px;letter-spacing:1px;color:var(--dk-accent);text-decoration:none;">VER TODO â†’</a>
             </div>
-            <div class="card-body p-0">
-                <?php if (empty($ultimosImports)): ?>
-                <p class="text-muted text-center py-3" style="font-size:13px;">Sin importaciones aún. <a href="<?= site_url('/import') ?>">Subir Excel</a></p>
-                <?php else: ?>
-                <table class="table table-sm mb-0" style="font-size:13px;">
-                    <thead><tr><th>Archivo</th><th>Estado</th><th>Items</th><th>Errores</th></tr></thead>
-                    <tbody>
-                        <?php foreach ($ultimosImports as $job): ?>
-                        <?php
-                            $stClass = match($job['estado']) {
-                                'finalizado' => 'status-finalizado',
-                                'error'      => 'status-error',
-                                'procesando' => 'status-procesando',
-                                default      => 'status-pendiente',
-                            };
-                        ?>
-                        <tr>
-                            <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><?= esc($job['archivo_nombre']) ?></td>
-                            <td><span class="status-badge <?= $stClass ?>"><?= esc(ucfirst($job['estado'])) ?></span></td>
-                            <td><?= (int) $job['procesados'] ?>/<?= (int) $job['total_items'] ?></td>
-                            <td style="color:<?= (int)$job['errores'] > 0 ? '#dc2626' : '#9ca3af' ?>;"><?= (int) $job['errores'] ?></td>
-                        </tr>
-                        <?php endforeach ?>
-                    </tbody>
-                </table>
-                <?php endif ?>
+
+            <?php if (empty($ultimosImports)): ?>
+            <div style="padding:20px 16px;font-family:var(--font-mono);font-size:12px;color:var(--dk-text-3);text-align:center;">
+                // sin importaciones â€” <a href="<?= site_url('/import') ?>">subir Excel</a>
             </div>
+            <?php else: ?>
+            <!-- header row -->
+            <div class="import-log-row" style="border-bottom:1px solid var(--dk-border);">
+                <span style="font-family:var(--font-mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dk-text-3);">Archivo</span>
+                <span style="font-family:var(--font-mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dk-text-3);text-align:right;">Items</span>
+                <span style="font-family:var(--font-mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dk-text-3);">Estado</span>
+                <span style="font-family:var(--font-mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dk-text-3);text-align:right;">Err</span>
+            </div>
+            <?php foreach ($ultimosImports as $job):
+                $stClass = match($job['estado']) {
+                    'finalizado' => 'status-finalizado',
+                    'error'      => 'status-error',
+                    'procesando' => 'status-procesando',
+                    default      => 'status-pendiente',
+                };
+            ?>
+            <div class="import-log-row">
+                <span class="import-log-file"><?= esc($job['archivo_nombre']) ?></span>
+                <span class="import-log-count"><?= (int)$job['procesados'] ?>/<?= (int)$job['total_items'] ?></span>
+                <span><span class="status-badge <?= $stClass ?>"><?= esc(ucfirst($job['estado'])) ?></span></span>
+                <span class="import-log-err"><?= (int)$job['errores'] ?: 'â€”' ?></span>
+            </div>
+            <?php endforeach ?>
+            <?php endif ?>
         </div>
+
     </div>
 
-    <!-- Top búsquedas sin resultado -->
-    <div class="col-lg-4">
-        <div class="card mb-30">
-            <div class="card-header">
-                <h3><i class='bx bx-bell' style="color:#dc2626;margin-right:6px;"></i>Piezas más buscadas sin resultado</h3>
+    <!-- Columna derecha: bÃºsquedas fallidas + accesos rÃ¡pidos -->
+    <div class="col-lg-4 mb-3">
+
+        <!-- Top bÃºsquedas sin resultado -->
+        <div style="background:var(--dk-surface);border:1px solid rgba(239,68,68,.2);border-radius:8px;overflow:hidden;margin-bottom:12px;">
+            <div class="misses-header">
+                <i class='bx bx-bell' style="color:var(--dk-danger);font-size:14px;"></i>
+                <span class="misses-header-label">Piezas sin catÃ¡logo</span>
             </div>
-            <div class="card-body p-0">
-                <?php if (empty($topBusquedas)): ?>
-                <p class="text-muted text-center py-3" style="font-size:13px;">Sin registros aún.</p>
-                <?php else: ?>
-                <?php
-                $maxContador = max(array_column($topBusquedas, 'contador')) ?: 1;
-                ?>
-                <div style="padding:12px 16px;">
-                    <?php foreach ($topBusquedas as $b): ?>
-                    <div style="margin-bottom:12px;">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-                            <span style="font-size:12px;font-weight:600;color:var(--compat-ink);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="<?= esc($b['termino']) ?>"><?= esc($b['termino']) ?></span>
-                            <span style="font-size:11px;font-weight:700;color:#dc2626;"><?= (int) $b['contador'] ?>x</span>
-                        </div>
-                        <div style="height:5px;background:rgba(220,38,38,.1);border-radius:4px;">
-                            <div style="height:100%;width:<?= round((int)$b['contador'] / $maxContador * 100) ?>%;background:#dc2626;border-radius:4px;"></div>
-                        </div>
-                    </div>
-                    <?php endforeach ?>
+            <?php if (empty($topBusquedas)): ?>
+            <div style="padding:16px;font-family:var(--font-mono);font-size:11px;color:var(--dk-text-3);text-align:center;">// sin registros</div>
+            <?php else:
+                $maxC = max(array_column($topBusquedas, 'contador')) ?: 1;
+            ?>
+            <?php foreach ($topBusquedas as $b): ?>
+            <div class="miss-item">
+                <span class="miss-term" title="<?= esc($b['termino']) ?>"><?= esc($b['termino']) ?></span>
+                <div class="miss-bar-wrap">
+                    <div class="miss-bar" style="width:<?= round((int)$b['contador'] / $maxC * 100) ?>%;"></div>
                 </div>
-                <?php endif ?>
+                <span class="miss-count"><?= (int)$b['contador'] ?></span>
             </div>
+            <?php endforeach ?>
+            <?php endif ?>
         </div>
 
-        <!-- Accesos rápidos -->
-        <div class="card mb-30">
-            <div class="card-header"><h3>Accesos rápidos</h3></div>
-            <div class="card-body" style="display:flex;flex-direction:column;gap:8px;">
-                <a href="<?= site_url('/motos/create') ?>" class="btn btn-block" style="background:rgba(249,115,22,.08);color:var(--compat-accent);font-weight:700;font-size:13px;border:1px solid rgba(249,115,22,.2);border-radius:8px;">
-                    <i class='bx bx-plus-circle' style="margin-right:6px;"></i>Nueva motocicleta
-                </a>
-                <a href="<?= site_url('/piezas/create') ?>" class="btn btn-block" style="background:rgba(249,115,22,.08);color:var(--compat-accent);font-weight:700;font-size:13px;border:1px solid rgba(249,115,22,.2);border-radius:8px;">
-                    <i class='bx bx-plus-circle' style="margin-right:6px;"></i>Nueva pieza maestra
-                </a>
-                <a href="<?= site_url('/compatibilidades/create') ?>" class="btn btn-block" style="background:rgba(249,115,22,.08);color:var(--compat-accent);font-weight:700;font-size:13px;border:1px solid rgba(249,115,22,.2);border-radius:8px;">
-                    <i class='bx bx-plus-circle' style="margin-right:6px;"></i>Nueva compatibilidad
-                </a>
-                <a href="<?= site_url('/import') ?>" class="btn btn-block" style="background:rgba(249,115,22,.08);color:var(--compat-accent);font-weight:700;font-size:13px;border:1px solid rgba(249,115,22,.2);border-radius:8px;">
-                    <i class='bx bx-upload' style="margin-right:6px;"></i>Importar Excel
-                </a>
-                <a href="<?= site_url('/buscador') ?>" class="btn btn-block" style="background:var(--compat-accent);color:#fff;font-weight:700;font-size:13px;border-radius:8px;">
-                    <i class='bx bx-search' style="margin-right:6px;"></i>Abrir buscador
-                </a>
-            </div>
+        <!-- Accesos rÃ¡pidos -->
+        <div style="background:var(--dk-surface);border:1px solid var(--dk-border);border-radius:8px;padding:14px;">
+            <div style="font-family:var(--font-mono);font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:var(--dk-text-3);margin-bottom:12px;">// accesos rÃ¡pidos</div>
+            <a href="<?= site_url('/buscador') ?>" class="dk-action-btn dk-action-primary">
+                <i class='bx bx-search'></i> Abrir Buscador
+            </a>
+            <a href="<?= site_url('/import') ?>" class="dk-action-btn">
+                <i class='bx bx-upload'></i> Importar Excel
+            </a>
+            <a href="<?= site_url('/motos/create') ?>" class="dk-action-btn">
+                <i class='bx bx-plus'></i> Nueva Moto
+            </a>
+            <a href="<?= site_url('/piezas/create') ?>" class="dk-action-btn">
+                <i class='bx bx-plus'></i> Nueva Pieza
+            </a>
+            <a href="<?= site_url('/compatibilidades/create') ?>" class="dk-action-btn">
+                <i class='bx bx-plus'></i> Nueva Compatibilidad
+            </a>
         </div>
+
     </div>
-
 </div>
+
 <?= $this->endSection() ?>
