@@ -213,6 +213,7 @@ class ImportService
                     'activo'     => 1,
                     'updated_at' => date('Y-m-d H:i:s'),
                 ]);
+            $productoId = (int) $producto['id'];
         } else {
             $slug = $this->makeSlug($clave . '-' . $nombre, 'productos');
             $this->db->table('productos')->insert([
@@ -224,7 +225,10 @@ class ImportService
                 'created_at'      => date('Y-m-d H:i:s'),
                 'updated_at'      => date('Y-m-d H:i:s'),
             ]);
+            $productoId = (int) $this->db->insertID();
         }
+
+        $this->enrichProducto($productoId, $nombre);
     }
 
     /**
@@ -284,5 +288,166 @@ class ImportService
             $slug = $base . '-' . $i++;
         }
         return $slug;
+    }
+
+    // ── Enriquecimiento automático ──────────────────────────────────────────
+
+    private function enrichProducto(int $productoId, string $descripcion): void
+    {
+        $desc = $this->normalize($descripcion);
+
+        // 1. detectar moto
+        $motos = $this->detectarMotos($desc);
+
+        // 2. detectar tipo pieza
+        $tipo = $this->detectarTipo($desc);
+
+        if (!$tipo || empty($motos)) {
+            return; // no romper flujo
+        }
+
+        // 3. crear pieza_maestra
+        $piezaId = $this->getOrCreatePiezaMaestra($tipo, $motos[0]);
+
+        // 4. asignar producto
+        $this->db->table('productos')
+            ->where('id', $productoId)
+            ->update(['pieza_maestra_id' => $piezaId]);
+
+        // 5. compatibilidades
+        foreach ($motos as $motoId) {
+            $this->upsertCompatibilidad($piezaId, $motoId);
+        }
+    }
+
+    private function normalize(string $text): string
+    {
+        $text = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', mb_strtolower(trim($text)));
+        return preg_replace('/\s+/', ' ', $text);
+    }
+
+    /** @return int[] lista de motocicleta_id detectados en la descripción */
+    private function detectarMotos(string $desc): array
+    {
+        $found = [];
+
+        // Primero buscar por alias (tokens cortos y únicos por diseño)
+        $aliases = $this->db->table('alias_motos')
+            ->select('motocicleta_id, alias')
+            ->get()->getResultArray();
+
+        foreach ($aliases as $a) {
+            $needle = $this->normalize($a['alias']);
+            if ($needle === '') {
+                continue;
+            }
+            $pattern = '/\b' . preg_quote($needle, '/') . '\b/i';
+            if (preg_match($pattern, $desc)) {
+                $motoId = (int) $a['motocicleta_id'];
+                if (!in_array($motoId, $found, true)) {
+                    $found[] = $motoId;
+                }
+            }
+        }
+
+        // Si no hubo matches por alias, intentar con marca + modelo
+        if (empty($found)) {
+            $motos = $this->db->table('motocicletas m')
+                ->select('m.id, m.modelo, ma.nombre AS marca')
+                ->join('marcas ma', 'ma.id = m.marca_id')
+                ->get()->getResultArray();
+
+            foreach ($motos as $m) {
+                $search = $this->normalize($m['marca'] . ' ' . $m['modelo']);
+                if ($search !== '' && str_contains($desc, $search)) {
+                    $motoId = (int) $m['id'];
+                    if (!in_array($motoId, $found, true)) {
+                        $found[] = $motoId;
+                    }
+                }
+            }
+        }
+
+        return $found;
+    }
+
+    private function detectarTipo(string $desc): ?string
+    {
+        // Orden: de más específico a más genérico
+        $keywords = [
+            'filtro de aceite'   => 'Filtro de Aceite',
+            'filtro de aire'     => 'Filtro de Aire',
+            'filtro aire'        => 'Filtro de Aire',
+            'balata delantera'   => 'Balata Delantera',
+            'balata trasera'     => 'Balata Trasera',
+            'pastilla delantera' => 'Balata Delantera',
+            'pastilla trasera'   => 'Balata Trasera',
+            'pastilla de freno'  => 'Balata',
+            'balata'             => 'Balata',
+            'bujia'              => 'Bujía',
+            'spark plug'         => 'Bujía',
+            'kit de arrastre'    => 'Kit de Arrastre',
+            'kit arrastre'       => 'Kit de Arrastre',
+            'llanta delantera'   => 'Llanta Delantera',
+            'llanta trasera'     => 'Llanta Trasera',
+            'llanta'             => 'Llanta',
+            'neumatico'          => 'Llanta',
+            'cadena'             => 'Cadena de Transmisión',
+            'corona'             => 'Corona',
+            'catarina'           => 'Catarina',
+            'clutch'             => 'Clutch',
+            'embrague'           => 'Clutch',
+            'amortiguador'       => 'Amortiguador',
+            'carburador'         => 'Carburador',
+            'bateria'            => 'Batería',
+            'aceite'             => 'Aceite de Motor',
+        ];
+
+        foreach ($keywords as $needle => $tipo) {
+            if (str_contains($desc, $needle)) {
+                return $tipo;
+            }
+        }
+
+        return null;
+    }
+
+    private function getOrCreatePiezaMaestra(string $tipo, int $motoId): int
+    {
+        $existing = $this->db->table('piezas_maestras')
+            ->where('nombre', $tipo)
+            ->get()->getRowArray();
+
+        if ($existing) {
+            return (int) $existing['id'];
+        }
+
+        $slug = $this->makeSlug($tipo, 'piezas_maestras');
+        $this->db->table('piezas_maestras')->insert([
+            'nombre'     => $tipo,
+            'slug'       => $slug,
+            'created_at' => date('Y-m-d H:i:s'),
+            'updated_at' => date('Y-m-d H:i:s'),
+        ]);
+        return (int) $this->db->insertID();
+    }
+
+    private function upsertCompatibilidad(int $piezaId, int $motoId): void
+    {
+        $exists = $this->db->table('compatibilidades')
+            ->where('pieza_maestra_id', $piezaId)
+            ->where('motocicleta_id', $motoId)
+            ->countAllResults();
+
+        if ($exists === 0) {
+            $this->db->table('compatibilidades')->insert([
+                'pieza_maestra_id'        => $piezaId,
+                'motocicleta_id'          => $motoId,
+                'confirmada'              => 0,
+                'contador_confirmaciones' => 0,
+                'created_at'              => date('Y-m-d H:i:s'),
+                'updated_at'              => date('Y-m-d H:i:s'),
+            ]);
+        }
     }
 }
