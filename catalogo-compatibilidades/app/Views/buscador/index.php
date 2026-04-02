@@ -208,9 +208,6 @@
 
 <div class="search-hero" x-data="{
     tab: 'texto',
-    marcaId: '',
-    motoId: '',
-    get canSearch() { return this.motoId !== '' && this.motoId !== '0'; },
     clearResults() {
         const t = document.getElementById('empty-template');
         document.getElementById('results-container').innerHTML = t ? t.innerHTML : '';
@@ -279,13 +276,21 @@
             <div class="cascade-field">
                 <label>Marca</label>
                 <select
-                    x-model="marcaId"
                     name="marca_id"
                     hx-get="<?= site_url('/cascada/modelos') ?>"
                     hx-trigger="change"
                     hx-target="#select-modelo"
                     hx-swap="innerHTML"
-                    @change="motoId = ''"
+                    hx-on::after-swap="
+                        document.getElementById('select-modelo').disabled = false;
+                        document.getElementById('results-container').innerHTML = '';
+                    "
+                    hx-on::before-request="
+                        var s = document.getElementById('select-modelo');
+                        s.disabled = true;
+                        s.innerHTML = '<option>Cargando&hellip;</option>';
+                        document.getElementById('results-container').innerHTML = '';
+                    "
                 >
                     <option value="">&#8212; Selecciona marca &#8212;</option>
                     <?php foreach ($marcas as $m): ?>
@@ -294,33 +299,21 @@
                 </select>
             </div>
 
-            <!-- Modelo (cargado por HTMX) -->
+            <!-- Modelo (cargado por HTMX, busca al cambiar) -->
             <div class="cascade-field">
                 <label>Modelo</label>
                 <select
                     id="select-modelo"
                     name="moto_id"
-                    x-model="motoId"
-                    :disabled="marcaId === '' || marcaId === '0'"
-                >
-                    <option value="">&#8212; Primero elige marca &#8212;</option>
-                </select>
-            </div>
-
-            <!-- Boton buscar -->
-            <div class="cascade-field">
-                <label style="visibility:hidden">Buscar</label>
-                <button
-                    class="cascade-btn"
-                    :disabled="!canSearch"
+                    disabled
                     hx-get="<?= site_url('/search/por-moto') ?>"
-                    hx-include="[name='moto_id']"
+                    hx-trigger="change"
                     hx-target="#results-container"
                     hx-swap="innerHTML"
                     hx-indicator="#cascade-indicator"
                 >
-                    <i class='bx bx-search-alt-2'></i> Buscar
-                </button>
+                    <option value="">&#8212; Primero elige marca &#8212;</option>
+                </select>
             </div>
 
         </div>
