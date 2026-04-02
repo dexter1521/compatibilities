@@ -324,8 +324,10 @@ class ImportService
 
     private function normalize(string $text): string
     {
-        $text = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', mb_strtolower(trim($text)));
-        return preg_replace('/\s+/', ' ', $text);
+        $text = strtoupper($text);
+        $text = str_replace(['-', '_'], ' ', $text);
+        $text = preg_replace('/\s+/', ' ', $text);
+        return trim($text);
     }
 
     private function getAliases(): array
@@ -341,6 +343,7 @@ class ImportService
     /** @return int[] lista de motocicleta_id detectados en la descripción */
     private function detectarMotos(string $desc): array
     {
+        $desc  = $this->normalize($desc);
         $found = [];
 
         // Primero buscar por alias (tokens cortos y únicos por diseño)
@@ -385,32 +388,32 @@ class ImportService
     {
         // Orden: de más específico a más genérico
         $keywords = [
-            'filtro de aceite'   => 'Filtro de Aceite',
-            'filtro de aire'     => 'Filtro de Aire',
-            'filtro aire'        => 'Filtro de Aire',
-            'balata delantera'   => 'Balata Delantera',
-            'balata trasera'     => 'Balata Trasera',
-            'pastilla delantera' => 'Balata Delantera',
-            'pastilla trasera'   => 'Balata Trasera',
-            'pastilla de freno'  => 'Balata',
-            'balata'             => 'Balata',
-            'bujia'              => 'Bujía',
-            'spark plug'         => 'Bujía',
-            'kit de arrastre'    => 'Kit de Arrastre',
-            'kit arrastre'       => 'Kit de Arrastre',
-            'llanta delantera'   => 'Llanta Delantera',
-            'llanta trasera'     => 'Llanta Trasera',
-            'llanta'             => 'Llanta',
-            'neumatico'          => 'Llanta',
-            'cadena'             => 'Cadena de Transmisión',
-            'corona'             => 'Corona',
-            'catarina'           => 'Catarina',
-            'clutch'             => 'Clutch',
-            'embrague'           => 'Clutch',
-            'amortiguador'       => 'Amortiguador',
-            'carburador'         => 'Carburador',
-            'bateria'            => 'Batería',
-            'aceite'             => 'Aceite de Motor',
+            'FILTRO DE ACEITE'   => 'Filtro de Aceite',
+            'FILTRO DE AIRE'     => 'Filtro de Aire',
+            'FILTRO AIRE'        => 'Filtro de Aire',
+            'BALATA DELANTERA'   => 'Balata Delantera',
+            'BALATA TRASERA'     => 'Balata Trasera',
+            'PASTILLA DELANTERA' => 'Balata Delantera',
+            'PASTILLA TRASERA'   => 'Balata Trasera',
+            'PASTILLA DE FRENO'  => 'Balata',
+            'BALATA'             => 'Balata',
+            'BUJIA'              => 'Bujía',
+            'SPARK PLUG'         => 'Bujía',
+            'KIT DE ARRASTRE'    => 'Kit de Arrastre',
+            'KIT ARRASTRE'       => 'Kit de Arrastre',
+            'LLANTA DELANTERA'   => 'Llanta Delantera',
+            'LLANTA TRASERA'     => 'Llanta Trasera',
+            'LLANTA'             => 'Llanta',
+            'NEUMATICO'          => 'Llanta',
+            'CADENA'             => 'Cadena de Transmisión',
+            'CORONA'             => 'Corona',
+            'CATARINA'           => 'Catarina',
+            'CLUTCH'             => 'Clutch',
+            'EMBRAGUE'           => 'Clutch',
+            'AMORTIGUADOR'       => 'Amortiguador',
+            'CARBURADOR'         => 'Carburador',
+            'BATERIA'            => 'Batería',
+            'ACEITE'             => 'Aceite de Motor',
         ];
 
         foreach ($keywords as $needle => $tipo) {
