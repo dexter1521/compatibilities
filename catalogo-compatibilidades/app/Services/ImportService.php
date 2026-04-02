@@ -26,6 +26,27 @@ class ImportService
 
     private array $aliasCache = [];
 
+    private array $mapTipos = [
+        'Filtro de Aceite'      => ['FILTRO DE ACEITE'],
+        'Filtro de Aire'        => ['FILTRO DE AIRE', 'FILTRO AIRE'],
+        'Balata Delantera'      => ['BALATA DELANTERA', 'PASTILLA DELANTERA'],
+        'Balata Trasera'        => ['BALATA TRASERA', 'PASTILLA TRASERA'],
+        'Balata'                => ['PASTILLA DE FRENO', 'BALATA'],
+        'Bujía'                 => ['BUJIA', 'SPARK PLUG'],
+        'Kit de Arrastre'       => ['KIT DE ARRASTRE', 'KIT ARRASTRE'],
+        'Llanta Delantera'      => ['LLANTA DELANTERA'],
+        'Llanta Trasera'        => ['LLANTA TRASERA'],
+        'Llanta'                => ['LLANTA', 'NEUMATICO'],
+        'Cadena de Transmisión' => ['CADENA'],
+        'Corona'                => ['CORONA'],
+        'Catarina'              => ['CATARINA'],
+        'Clutch'                => ['CLUTCH', 'EMBRAGUE'],
+        'Amortiguador'          => ['AMORTIGUADOR'],
+        'Carburador'            => ['CARBURADOR'],
+        'Batería'               => ['BATERIA'],
+        'Aceite de Motor'       => ['ACEITE'],
+    ];
+
     private const UPLOAD_DIR = WRITEPATH . 'uploads/';
 
     public function __construct()
@@ -369,39 +390,13 @@ class ImportService
 
     private function detectarTipo(string $desc): ?string
     {
-        // Orden: de más específico a más genérico
-        $keywords = [
-            'FILTRO DE ACEITE'   => 'Filtro de Aceite',
-            'FILTRO DE AIRE'     => 'Filtro de Aire',
-            'FILTRO AIRE'        => 'Filtro de Aire',
-            'BALATA DELANTERA'   => 'Balata Delantera',
-            'BALATA TRASERA'     => 'Balata Trasera',
-            'PASTILLA DELANTERA' => 'Balata Delantera',
-            'PASTILLA TRASERA'   => 'Balata Trasera',
-            'PASTILLA DE FRENO'  => 'Balata',
-            'BALATA'             => 'Balata',
-            'BUJIA'              => 'Bujía',
-            'SPARK PLUG'         => 'Bujía',
-            'KIT DE ARRASTRE'    => 'Kit de Arrastre',
-            'KIT ARRASTRE'       => 'Kit de Arrastre',
-            'LLANTA DELANTERA'   => 'Llanta Delantera',
-            'LLANTA TRASERA'     => 'Llanta Trasera',
-            'LLANTA'             => 'Llanta',
-            'NEUMATICO'          => 'Llanta',
-            'CADENA'             => 'Cadena de Transmisión',
-            'CORONA'             => 'Corona',
-            'CATARINA'           => 'Catarina',
-            'CLUTCH'             => 'Clutch',
-            'EMBRAGUE'           => 'Clutch',
-            'AMORTIGUADOR'       => 'Amortiguador',
-            'CARBURADOR'         => 'Carburador',
-            'BATERIA'            => 'Batería',
-            'ACEITE'             => 'Aceite de Motor',
-        ];
+        $desc = $this->normalize($desc);
 
-        foreach ($keywords as $needle => $tipo) {
-            if (str_contains($desc, $needle)) {
-                return $tipo;
+        foreach ($this->mapTipos as $tipo => $keywords) {
+            foreach ($keywords as $kw) {
+                if (str_contains($desc, $this->normalize($kw))) {
+                    return $tipo;
+                }
             }
         }
 
