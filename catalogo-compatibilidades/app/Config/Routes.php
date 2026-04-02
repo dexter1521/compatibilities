@@ -8,8 +8,10 @@ use CodeIgniter\Router\RouteCollection;
 $routes->get('/', 'Home::index');
 
 // Buscador
-$routes->get('/buscador', 'Search::index');
-$routes->get('/search',   'Search::results');
+$routes->get('/buscador',          'Search::index');
+$routes->get('/search',            'Search::results');
+$routes->get('/search/por-moto',   'Search::porMoto');
+$routes->get('/cascada/modelos',   'Search::cascadaModelos');
 
 // ── CRUD Motocicletas ──────────────────────────────────────────
 $routes->get('/motos',                 'Motos::index');

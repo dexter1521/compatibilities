@@ -43,10 +43,41 @@
         margin-bottom: 0;
     }
 
-    .search-input-wrap {
-        position: relative;
-        margin-top: 24px;
+    /* ── Tabs ──────────────────────────────────────────────── */
+    .search-tabs {
+        display: flex;
+        gap: 4px;
+        border-bottom: 2px solid rgba(17,24,39,.08);
+        margin: 22px 0 24px;
     }
+
+    .search-tab-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 9px 18px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #6b7280;
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -2px;
+        border-radius: 6px 6px 0 0;
+        cursor: pointer;
+        transition: color .15s, border-color .15s;
+    }
+
+    .search-tab-btn:hover { color: var(--compat-ink); }
+
+    .search-tab-btn.active {
+        color: var(--compat-accent);
+        border-bottom-color: var(--compat-accent);
+        background: rgba(249,115,22,.05);
+    }
+
+    /* ── Text search ───────────────────────────────────────── */
+    .search-input-wrap { position: relative; }
 
     .search-input-wrap .search-icon {
         position: absolute;
@@ -93,51 +124,215 @@
         gap: 16px;
     }
 
-    .search-tip span::before {
-        content: '— ';
+    .search-tip span::before { content: '— '; }
+
+    /* ── Cascade search ─────────────────────────────────────── */
+    .cascade-form {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+        gap: 14px;
+        align-items: end;
     }
 
-    #results-container {
-        min-height: 60px;
+    .cascade-field label {
+        display: block;
+        font-size: 11.5px;
+        font-weight: 700;
+        color: #374151;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+        margin-bottom: 5px;
     }
+
+    .cascade-field select {
+        width: 100%;
+        padding: 10px 34px 10px 14px;
+        font-size: 13.5px;
+        font-weight: 500;
+        border: 2px solid rgba(17,24,39,.12);
+        border-radius: 10px;
+        background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 12px center;
+        color: var(--compat-ink);
+        appearance: none;
+        cursor: pointer;
+        transition: border-color .2s, box-shadow .2s;
+        height: 44px;
+    }
+
+    .cascade-field select:focus {
+        border-color: var(--compat-accent);
+        box-shadow: 0 0 0 3px rgba(249,115,22,.12);
+        outline: none;
+    }
+
+    .cascade-field select:disabled {
+        background-color: #f9fafb;
+        color: #9ca3af;
+        cursor: not-allowed;
+    }
+
+    .cascade-btn {
+        padding: 10px 24px;
+        height: 44px;
+        background: var(--compat-accent);
+        color: #fff;
+        font-weight: 700;
+        font-size: 14px;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: background .2s, opacity .2s;
+        white-space: nowrap;
+    }
+
+    .cascade-btn:disabled { opacity: .5; cursor: not-allowed; }
+    .cascade-btn:not(:disabled):hover { background: var(--compat-accent-dark); }
+
+    .cascade-loading {
+        display: none;
+        font-size: 12px;
+        color: #9ca3af;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .htmx-request .cascade-loading { display: flex; }
+
+    #results-container { min-height: 60px; }
+
+    [x-cloak] { display: none !important; }
 </style>
 
-<div class="search-hero">
+<div class="search-hero" x-data="{
+    tab: 'texto',
+    marcaId: '',
+    motoId: '',
+    get canSearch() { return this.motoId !== '' && this.motoId !== '0'; },
+    clearResults() {
+        const t = document.getElementById('empty-template');
+        document.getElementById('results-container').innerHTML = t ? t.innerHTML : '';
+    }
+}">
     <div class="search-label">
         <i class='bx bx-search-alt'></i> Buscador inteligente
     </div>
-    <h1 class="search-title">¿Qué pieza necesitas?</h1>
+    <h1 class="search-title">&iquest;Qu&eacute; pieza necesitas?</h1>
     <p class="search-subtitle">
-        Busca por nombre de pieza, clave de proveedor o modelo de moto.<br>
-        Los resultados incluyen compatibilidades verificadas y claves equivalentes.
+        Busca por nombre de pieza o selecciona el modelo de tu moto para ver las refacciones compatibles.
     </p>
 
-    <div class="search-input-wrap">
-        <i class='bx bx-search search-icon'></i>
-        <input
-            id="q"
-            name="q"
-            type="search"
-            class="form-control"
-            placeholder='Ej: "filtro aceite", "CG125", "X-001"…'
-            autocomplete="off"
-            autofocus
-            hx-get="<?= site_url('/search') ?>"
-            hx-trigger="keyup changed delay:400ms, search"
-            hx-target="#results-container"
-            hx-swap="innerHTML"
-            hx-indicator=".search-input-wrap"
+    <!-- Tabs -->
+    <div class="search-tabs">
+        <button
+            class="search-tab-btn"
+            :class="{ active: tab === 'texto' }"
+            @click="tab = 'texto'; clearResults()"
         >
-        <span class="search-spinner">
-            <span class="spinner-border spinner-border-sm text-warning" role="status"></span>
-        </span>
+            <i class='bx bx-search'></i> Texto libre
+        </button>
+        <button
+            class="search-tab-btn"
+            :class="{ active: tab === 'moto' }"
+            @click="tab = 'moto'; clearResults()"
+        >
+            <i class='bx bx-cycling'></i> Por modelo de moto
+        </button>
     </div>
-    <p class="search-tip">
-        <span>Filtro de aceite</span>
-        <span>Honda CB125</span>
-        <span>AX-100 Carburador</span>
-    </p>
+
+    <!-- Tab 1: Text search -->
+    <div x-show="tab === 'texto'" x-cloak>
+        <div class="search-input-wrap" id="text-search-wrap">
+            <i class='bx bx-search search-icon'></i>
+            <input
+                id="q"
+                name="q"
+                type="search"
+                class="form-control"
+                placeholder='Ej: "filtro aceite", "CG125", "X-001"&hellip;'
+                autocomplete="off"
+                autofocus
+                hx-get="<?= site_url('/search') ?>"
+                hx-trigger="keyup changed delay:400ms, search"
+                hx-target="#results-container"
+                hx-swap="innerHTML"
+                hx-indicator="#text-search-wrap"
+            >
+            <span class="search-spinner">
+                <span class="spinner-border spinner-border-sm text-warning" role="status"></span>
+            </span>
+        </div>
+        <p class="search-tip">
+            <span>Filtro de aceite</span>
+            <span>Honda CB125</span>
+            <span>AX-100 Carburador</span>
+        </p>
+    </div>
+
+    <!-- Tab 2: Cascade search -->
+    <div x-show="tab === 'moto'" x-cloak>
+        <div class="cascade-form">
+
+            <!-- Marca -->
+            <div class="cascade-field">
+                <label>Marca</label>
+                <select
+                    x-model="marcaId"
+                    name="marca_id"
+                    hx-get="<?= site_url('/cascada/modelos') ?>"
+                    hx-trigger="change"
+                    hx-target="#select-modelo"
+                    hx-swap="innerHTML"
+                    @change="motoId = ''"
+                >
+                    <option value="">&#8212; Selecciona marca &#8212;</option>
+                    <?php foreach ($marcas as $m): ?>
+                    <option value="<?= (int) $m['id'] ?>"><?= esc($m['nombre']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <!-- Modelo (cargado por HTMX) -->
+            <div class="cascade-field">
+                <label>Modelo</label>
+                <select
+                    id="select-modelo"
+                    name="moto_id"
+                    x-model="motoId"
+                    :disabled="marcaId === '' || marcaId === '0'"
+                >
+                    <option value="">&#8212; Primero elige marca &#8212;</option>
+                </select>
+            </div>
+
+            <!-- Boton buscar -->
+            <div class="cascade-field">
+                <label style="visibility:hidden">Buscar</label>
+                <button
+                    class="cascade-btn"
+                    :disabled="!canSearch"
+                    hx-get="<?= site_url('/search/por-moto') ?>"
+                    hx-include="[name='moto_id']"
+                    hx-target="#results-container"
+                    hx-swap="innerHTML"
+                    hx-indicator="#cascade-indicator"
+                >
+                    <i class='bx bx-search-alt-2'></i> Buscar
+                </button>
+            </div>
+
+        </div>
+
+        <div id="cascade-indicator" class="cascade-loading mt-2">
+            <span class="spinner-border spinner-border-sm text-warning" role="status"></span>
+            Buscando refacciones&hellip;
+        </div>
+    </div>
 </div>
+
+<template id="empty-template"><?= view('buscador/_empty') ?></template>
 
 <div id="results-container">
     <?= view('buscador/_empty') ?>

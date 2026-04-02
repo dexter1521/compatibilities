@@ -145,6 +145,122 @@ class SearchModel extends Model
     }
 
     /**
+     * Devuelve todas las marcas para poblar el select de la cascada.
+     */
+    public function getMarcas(): array
+    {
+        return $this->db->table('marcas')
+            ->orderBy('nombre', 'ASC')
+            ->get()
+            ->getResultArray();
+    }
+
+    /**
+     * Devuelve los modelos de una marca, con etiqueta enriquecida.
+     */
+    public function getModelosByMarca(int $marcaId): array
+    {
+        return $this->db->table('motocicletas')
+            ->where('marca_id', $marcaId)
+            ->orderBy('modelo', 'ASC')
+            ->get()
+            ->getResultArray();
+    }
+
+    /**
+     * Busca piezas maestras compatibles con una motocicleta concreta.
+     * Devuelve el mismo formato que searchByTerm().
+     */
+    public function searchByMoto(int $motoId): array
+    {
+        $piezaRows = $this->db->query(
+            'SELECT DISTINCT c.pieza_maestra_id FROM compatibilidades c WHERE c.motocicleta_id = ? LIMIT 50',
+            [$motoId]
+        )->getResultArray();
+
+        $piezaIds = array_column($piezaRows, 'pieza_maestra_id');
+        if (empty($piezaIds)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($piezaIds), '?'));
+
+        $rows = $this->db->query("
+            SELECT
+                pm.id            AS pieza_maestra_id,
+                pm.nombre        AS pieza_nombre,
+                p.id             AS producto_id,
+                p.clave_proveedor,
+                p.nombre         AS producto_nombre,
+                pr.nombre        AS proveedor_nombre,
+                c.id             AS compat_id,
+                c.confirmada,
+                c.contador_confirmaciones,
+                mo.id            AS moto_id,
+                ma.nombre        AS marca_nombre,
+                mo.modelo        AS moto_modelo,
+                mo.anio_desde,
+                mo.anio_hasta,
+                mo.cilindrada
+            FROM piezas_maestras pm
+            LEFT JOIN productos p        ON p.pieza_maestra_id = pm.id AND p.activo = 1
+            LEFT JOIN proveedores pr     ON pr.id = p.proveedor_id
+            LEFT JOIN compatibilidades c ON c.pieza_maestra_id = pm.id
+            LEFT JOIN motocicletas mo    ON mo.id = c.motocicleta_id
+            LEFT JOIN marcas ma          ON ma.id = mo.marca_id
+            WHERE pm.id IN ($placeholders)
+            ORDER BY pm.nombre, ma.nombre, mo.modelo
+        ", $piezaIds)->getResultArray();
+
+        $results = [];
+        foreach ($rows as $row) {
+            $pid = (int) $row['pieza_maestra_id'];
+            if (!isset($results[$pid])) {
+                $results[$pid] = [
+                    'pieza_maestra_id' => $pid,
+                    'pieza_nombre'     => $row['pieza_nombre'],
+                    'productos'        => [],
+                    'compatibilidades' => [],
+                ];
+            }
+            if ($row['producto_id'] !== null) {
+                $prodId = (int) $row['producto_id'];
+                if (!isset($results[$pid]['productos'][$prodId])) {
+                    $results[$pid]['productos'][$prodId] = [
+                        'id'              => $prodId,
+                        'clave_proveedor' => $row['clave_proveedor'],
+                        'nombre'          => $row['producto_nombre'],
+                        'proveedor'       => $row['proveedor_nombre'],
+                    ];
+                }
+            }
+            if ($row['compat_id'] !== null) {
+                $cid = (int) $row['compat_id'];
+                if (!isset($results[$pid]['compatibilidades'][$cid])) {
+                    $results[$pid]['compatibilidades'][$cid] = [
+                        'id'                      => $cid,
+                        'confirmada'              => (int) $row['confirmada'],
+                        'contador_confirmaciones' => (int) $row['contador_confirmaciones'],
+                        'marca_nombre'            => $row['marca_nombre'],
+                        'moto_modelo'             => $row['moto_modelo'],
+                        'anio_desde'              => $row['anio_desde'],
+                        'anio_hasta'              => $row['anio_hasta'],
+                        'cilindrada'              => $row['cilindrada'],
+                    ];
+                }
+            }
+        }
+
+        foreach ($results as &$r) {
+            $r['productos']        = array_values($r['productos']);
+            $r['compatibilidades'] = array_values($r['compatibilidades']);
+        }
+        unset($r);
+
+        return array_values($results);
+    }
+
+    /**
      * Registra o incrementa un término no encontrado.
      * Usa UPSERT para evitar duplicados por termino_normalizado.
      */
