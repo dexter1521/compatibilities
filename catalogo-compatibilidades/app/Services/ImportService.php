@@ -24,6 +24,8 @@ class ImportService
 {
     private \CodeIgniter\Database\BaseConnection $db;
 
+    private array $aliasCache = [];
+
     private const UPLOAD_DIR = WRITEPATH . 'uploads/';
 
     public function __construct()
@@ -326,15 +328,23 @@ class ImportService
         return preg_replace('/\s+/', ' ', $text);
     }
 
+    private function getAliases(): array
+    {
+        if (empty($this->aliasCache)) {
+            $this->aliasCache = $this->db->table('alias_motos')
+                ->select('motocicleta_id, alias')
+                ->get()->getResultArray();
+        }
+        return $this->aliasCache;
+    }
+
     /** @return int[] lista de motocicleta_id detectados en la descripción */
     private function detectarMotos(string $desc): array
     {
         $found = [];
 
         // Primero buscar por alias (tokens cortos y únicos por diseño)
-        $aliases = $this->db->table('alias_motos')
-            ->select('motocicleta_id, alias')
-            ->get()->getResultArray();
+        $aliases = $this->getAliases();
 
         foreach ($aliases as $a) {
             $needle = $this->normalize($a['alias']);
