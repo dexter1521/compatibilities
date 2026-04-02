@@ -101,4 +101,46 @@ class Import extends BaseController
             view('import/_job_detail', ['job' => $job, 'items' => $items])
         );
     }
-}
+
+    // ── Pendientes de enriquecimiento ──────────────────────
+
+    /**
+     * GET /import/pendientes
+     * Endpoint HTMX: devuelve tabla de productos que no pudieron enriquecerse.
+     */
+    public function pendientes(): ResponseInterface
+    {
+        $db = \Config\Database::connect();
+
+        $rows = $db->table('productos p')
+            ->select('p.id, p.nombre, p.clave_proveedor, p.enrich_estado, pr.nombre AS proveedor')
+            ->join('proveedores pr', 'pr.id = p.proveedor_id', 'left')
+            ->whereIn('p.enrich_estado', ['sin_tipo', 'sin_moto', 'sin_ambos'])
+            ->orWhere('p.enrich_estado IS NULL')
+            ->orderBy('p.enrich_estado')
+            ->orderBy('p.nombre')
+            ->get()->getResultArray();
+
+        return $this->response->setBody(
+            view('import/_pendientes', ['pendientes' => $rows])
+        );
+    }
+
+    /**
+     * POST /import/reenrich
+     * Reintenta el enriquecimiento de todos los productos pendientes.
+     * Devuelve JSON con contadores para HTMX.
+     */
+    public function reenrich(): ResponseInterface
+    {
+        $service = new ImportService();
+        $result  = $service->reenrichPendientes();
+
+        session()->setFlashdata(
+            'success',
+            "Reintento completado: {$result['ok']} enriquecidos, {$result['pendientes']} aún pendientes."
+        );
+
+        return $this->response
+            ->setHeader('HX-Redirect', site_url('/import'))
+            ->setBody('');

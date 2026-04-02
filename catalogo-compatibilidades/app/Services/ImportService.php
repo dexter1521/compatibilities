@@ -319,14 +319,22 @@ class ImportService
     {
         $desc = $this->normalize($descripcion);
 
-        // 1. detectar moto
+        // 1. detectar moto y tipo
         $motos = $this->detectarMotos($desc);
+        $tipo  = $this->detectarTipo($desc);
 
-        // 2. detectar tipo pieza
-        $tipo = $this->detectarTipo($desc);
-
-        if (!$tipo || empty($motos)) {
-            return; // no romper flujo
+        // 2. registrar estado y salir si falta alguno
+        if (!$tipo && empty($motos)) {
+            $this->db->table('productos')->where('id', $productoId)->update(['enrich_estado' => 'sin_ambos']);
+            return;
+        }
+        if (!$tipo) {
+            $this->db->table('productos')->where('id', $productoId)->update(['enrich_estado' => 'sin_tipo']);
+            return;
+        }
+        if (empty($motos)) {
+            $this->db->table('productos')->where('id', $productoId)->update(['enrich_estado' => 'sin_moto']);
+            return;
         }
 
         // 3. detectar rango de años desde la descripción original
@@ -335,15 +343,55 @@ class ImportService
         // 4. crear pieza_maestra
         $piezaId = $this->getOrCreatePiezaMaestra($tipo, $motos[0]);
 
-        // 5. asignar producto
+        // 5. asignar producto + marcar ok
         $this->db->table('productos')
             ->where('id', $productoId)
-            ->update(['pieza_maestra_id' => $piezaId]);
+            ->update(['pieza_maestra_id' => $piezaId, 'enrich_estado' => 'ok']);
 
         // 6. compatibilidades
         foreach ($motos as $motoId) {
             $this->upsertCompatibilidad($piezaId, $motoId, $anioDe, $anioHasta);
         }
+    }
+
+    /**
+     * Reintenta el enriquecimiento de todos los productos pendientes (enrich_estado != 'ok').
+     * Limpia el aliasCache para tomar los aliases recién agregados.
+     *
+     * @return array{ok: int, pendientes: int}
+     */
+    public function reenrichPendientes(): array
+    {
+        // Limpiar cache para que detectarMotos() vea los aliases nuevos
+        $this->aliasCache = [];
+
+        $productos = $this->db->table('productos')
+            ->select('id, nombre')
+            ->whereIn('enrich_estado', ['sin_tipo', 'sin_moto', 'sin_ambos'])
+            ->orWhere('enrich_estado IS NULL')
+            ->get()->getResultArray();
+
+        $ok         = 0;
+        $pendientes = 0;
+
+        foreach ($productos as $p) {
+            $estadoAntes = $p['enrich_estado'] ?? null;
+            $this->enrichProducto((int) $p['id'], $p['nombre']);
+
+            // Leer estado actualizado
+            $nuevo = $this->db->table('productos')
+                ->select('enrich_estado')
+                ->where('id', $p['id'])
+                ->get()->getRowArray();
+
+            if (($nuevo['enrich_estado'] ?? '') === 'ok') {
+                $ok++;
+            } else {
+                $pendientes++;
+            }
+        }
+
+        return ['ok' => $ok, 'pendientes' => $pendientes];
     }
 
     private function normalize(string $text): string

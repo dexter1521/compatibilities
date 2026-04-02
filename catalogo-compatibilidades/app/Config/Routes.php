@@ -39,6 +39,8 @@ $routes->post('/compatibilidades/(:num)/delete', 'Compatibilidades::delete/$1');
 $routes->post('/compatibilidades/(:num)/confirm', 'Search::confirm/$1');
 
 // ── Importador ─────────────────────────────────────────────────
-$routes->get('/import',            'Import::index');
-$routes->post('/import/upload',    'Import::upload');
-$routes->get('/import/job/(:num)', 'Import::jobDetail/$1');
+$routes->get('/import',              'Import::index');
+$routes->post('/import/upload',      'Import::upload');
+$routes->get('/import/job/(:num)',   'Import::jobDetail/$1');
+$routes->get('/import/pendientes',   'Import::pendientes');
+$routes->post('/import/reenrich',    'Import::reenrich');

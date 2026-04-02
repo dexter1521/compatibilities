@@ -215,6 +215,28 @@
     </form>
 </div>
 
+<!-- ── Pendientes de enriquecimiento ────────────────────────── -->
+<div class="jobs-card">
+    <div class="jobs-card-header">
+        <span class="jobs-card-title">
+            <i class='bx bx-error-circle' style="color:#f97316;margin-right:6px;"></i>
+            Productos pendientes de enriquecimiento
+        </span>
+        <button
+            class="btn-detail"
+            hx-get="<?= site_url('/import/pendientes') ?>"
+            hx-target="#pendientes-container"
+            hx-swap="innerHTML"
+            hx-trigger="load, click"
+        ><i class='bx bx-refresh'></i> Actualizar</button>
+    </div>
+    <div id="pendientes-container" style="padding:16px 20px;">
+        <div style="text-align:center;color:#9ca3af;font-size:13px;padding:20px 0;">
+            <i class='bx bx-loader-alt' style="animation:spin 1s linear infinite;"></i> Cargando…
+        </div>
+    </div>
+</div>
+
 <!-- ── Historial de importaciones ──────────────────────────── -->
 <div class="jobs-card">
     <div class="jobs-card-header">
