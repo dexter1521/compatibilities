@@ -4,14 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-
     <link rel="stylesheet" href="<?= base_url('fiva-assets/css/vendors.min.css') ?>">
     <link rel="stylesheet" href="<?= base_url('fiva-assets/css/style.css') ?>">
     <link rel="stylesheet" href="<?= base_url('fiva-assets/css/responsive.css') ?>">
-    <link rel="stylesheet" href="<?= base_url('fiva-assets/css/compat-dark.css') ?>">
 
     <title><?= esc($title ?? 'Compatibilidades') ?></title>
     <link rel="icon" type="image/png" href="<?= base_url('favicon.png') ?>">
