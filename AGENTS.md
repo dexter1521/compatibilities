@@ -18,6 +18,8 @@ Este repositorio contiene el proyecto **Catálogo de Compatibilidades** desarrol
 
 6. **Usar control de versiones**: Todos los cambios deben hacerse a través de branches separados y pull requests para revisión.
 
+7. **No hacer commit de archivos temporales o basura**: Evitar incluir archivos de debug, cookies, archivos HTML generados temporalmente, scripts de prueba o cualquier archivo no relacionado con el código fuente principal del proyecto.
+
 ## Reglas Específicas para Agentes
 - **Acceso limitado**: Los agentes solo pueden acceder a archivos dentro del workspace definido. No intentar acceder a directorios externos o sistemas no autorizados.
 - **Ejecución controlada**: No ejecutar comandos destructivos (como `rm -rf`) sin verificación explícita.
