@@ -22,9 +22,9 @@ $selMoto  = (int)($old['motocicleta_id']   ?? $compat['motocicleta_id']   ?? 0);
     <div class="modal-body" style="padding:20px;">
 
         <?php if (!empty($errors['general'])): ?>
-        <div class="alert alert-danger py-2 px-3 mb-3" style="font-size:13px;">
-            <i class='bx bx-error-circle'></i> <?= esc($errors['general']) ?>
-        </div>
+            <div class="alert alert-danger py-2 px-3 mb-3" style="font-size:13px;">
+                <i class='bx bx-error-circle'></i> <?= esc($errors['general']) ?>
+            </div>
         <?php endif ?>
 
         <!-- PIEZA MAESTRA -->
@@ -35,17 +35,16 @@ $selMoto  = (int)($old['motocicleta_id']   ?? $compat['motocicleta_id']   ?? 0);
             <select
                 name="pieza_maestra_id"
                 class="form-control <?= !empty($errors['pieza_maestra_id']) ? 'is-invalid' : '' ?>"
-                style="font-size:13.5px;"
-            >
+                style="font-size:13.5px;">
                 <option value="">— Selecciona una pieza —</option>
                 <?php foreach ($piezas as $p): ?>
-                <option value="<?= $p['id'] ?>" <?= $selPieza === (int)$p['id'] ? 'selected' : '' ?>>
-                    <?= esc($p['nombre']) ?>
-                </option>
+                    <option value="<?= $p['id'] ?>" <?= $selPieza === (int)$p['id'] ? 'selected' : '' ?>>
+                        <?= esc($p['nombre']) ?>
+                    </option>
                 <?php endforeach ?>
             </select>
             <?php if (!empty($errors['pieza_maestra_id'])): ?>
-            <div class="invalid-feedback"><?= esc($errors['pieza_maestra_id']) ?></div>
+                <div class="invalid-feedback"><?= esc($errors['pieza_maestra_id']) ?></div>
             <?php endif ?>
         </div>
 
@@ -57,8 +56,7 @@ $selMoto  = (int)($old['motocicleta_id']   ?? $compat['motocicleta_id']   ?? 0);
             <select
                 name="motocicleta_id"
                 class="form-control <?= !empty($errors['motocicleta_id']) ? 'is-invalid' : '' ?>"
-                style="font-size:13.5px;"
-            >
+                style="font-size:13.5px;">
                 <option value="">— Selecciona una moto —</option>
                 <?php
                 $currentMarca = '';
@@ -82,7 +80,7 @@ $selMoto  = (int)($old['motocicleta_id']   ?? $compat['motocicleta_id']   ?? 0);
                 ?>
             </select>
             <?php if (!empty($errors['motocicleta_id'])): ?>
-            <div class="invalid-feedback"><?= esc($errors['motocicleta_id']) ?></div>
+                <div class="invalid-feedback"><?= esc($errors['motocicleta_id']) ?></div>
             <?php endif ?>
             <small style="color:#9ca3af;font-size:11.5px;margin-top:4px;display:block;">
                 Las motos están agrupadas por marca.

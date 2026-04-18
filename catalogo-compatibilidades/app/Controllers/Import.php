@@ -7,7 +7,7 @@ use CodeIgniter\HTTP\ResponseInterface;
 
 class Import extends BaseController
 {
-    // ── Página principal ───────────────────────────────────────
+    // ── Página principal ──────────────────────────────────────
 
     /**
      * GET /import
@@ -29,24 +29,21 @@ class Import extends BaseController
         ]);
     }
 
-    // ── Subir y procesar ───────────────────────────────────────
+    // ── Subir y procesar ──────────────────────────────────────
 
     /**
      * POST /import/upload
      * Recibe el archivo subido, delega en ImportService::run() y redirige con flashdata.
-     * El archivo se convierte de CIFile a array nativo antes de pasarse al servicio.
      */
     public function upload()
     {
         $file = $this->request->getFile('archivo');
 
-        // CI4 CIFile → convertir a array nativo para el servicio
         if (!$file || !$file->isValid() || $file->hasMoved()) {
             session()->setFlashdata('error', 'No se recibió ningún archivo válido.');
             return redirect()->to(site_url('/import'));
         }
 
-        // Mover a tmp para pasar al servicio como array nativo
         $tmpPath = WRITEPATH . 'uploads/tmp_' . $file->getRandomName();
         $file->move(WRITEPATH . 'uploads/', basename($tmpPath));
 
@@ -60,7 +57,6 @@ class Import extends BaseController
         $service = new ImportService();
         $result  = $service->run($nativeFile);
 
-        // Limpiar tmp
         if (file_exists($nativeFile['tmp_name'])) {
             @unlink($nativeFile['tmp_name']);
         }
@@ -74,11 +70,10 @@ class Import extends BaseController
         return redirect()->to(site_url('/import'));
     }
 
-    // ── Detalle de un job (HTMX partial) ──────────────────────
+    // ── Detalle de un job (HTMX partial) ─────────────────────
 
     /**
      * GET /import/job/{id}
-     * Endpoint HTMX: devuelve el partial HTML con el detalle del job y sus items.
      *
      * @param int $id ID del import_job
      */
@@ -102,7 +97,7 @@ class Import extends BaseController
         );
     }
 
-    // ── Pendientes de enriquecimiento ──────────────────────
+    // ── Pendientes de enriquecimiento ─────────────────────────
 
     /**
      * GET /import/pendientes
@@ -118,18 +113,19 @@ class Import extends BaseController
             ->whereIn('p.enrich_estado', ['sin_tipo', 'sin_moto', 'sin_ambos'])
             ->orWhere('p.enrich_estado IS NULL')
             ->orderBy('p.enrich_estado')
-            ->orderBy('p.nombre')
-            ->get()->getResultArray();
+            ->get()
+            ->getResultArray();
 
         return $this->response->setBody(
             view('import/_pendientes', ['pendientes' => $rows])
         );
     }
 
+    // ── Reintento de enriquecimiento ──────────────────────────
+
     /**
      * POST /import/reenrich
      * Reintenta el enriquecimiento de todos los productos pendientes.
-     * Devuelve JSON con contadores para HTMX.
      */
     public function reenrich(): ResponseInterface
     {
@@ -144,3 +140,102 @@ class Import extends BaseController
         return $this->response
             ->setHeader('HX-Redirect', site_url('/import'))
             ->setBody('');
+    }
+
+    /**
+     * POST /import/detectar-modelos
+     * Equivalente web de `php spark detectar:modelos`.
+     * Escanea los nombres de productos para detectar códigos de moto,
+     * genera aliases automáticos para las motos existentes y guarda
+     * los modelos desconocidos en modelos_detectados_raw.
+     */
+    public function detectarModelos(): ResponseInterface
+    {
+        $db = \Config\Database::connect();
+
+        // Prefijos canónicos de modelos de moto
+        $prefijos = [
+            'ft','dm','dt','ds','at','ws','rc','ns','rs','gn','gs',
+            'cg','fz','bws','en','ybr','cs','dsg','gts','xft','dsr',
+            'rt','sz','gl',
+        ];
+
+        $productos = $db->table('productos')->select('id, nombre')->get()->getResultArray();
+
+        $aliasInserted = [];
+        $aliasCreados  = 0;
+        $modelosNuevos = 0;
+        $rawInserted   = [];
+
+        foreach ($productos as $p) {
+            $desc = mb_strtolower($p['nombre']);
+            $desc = str_replace(['-', '_', '.', ';'], ' ', $desc);
+            $desc = preg_replace('/\s+/', ' ', $desc);
+
+            preg_match_all('/\b([a-z]{1,4})\s?-?\s?(\d{2,3})\b/i', $desc, $matches, PREG_SET_ORDER);
+
+            foreach ($matches as $m) {
+                $prefijo = strtolower(trim($m[1]));
+                $numero  = trim($m[2]);
+                $modelo  = strtoupper($prefijo . $numero);
+
+                if (!in_array($prefijo, $prefijos, true)) {
+                    continue;
+                }
+
+                // Buscar moto (exacta primero, luego LIKE)
+                $moto = $db->table('motocicletas')->select('id')->where('UPPER(modelo)', $modelo)->get()->getRowArray();
+                if (!$moto) {
+                    $moto = $db->table('motocicletas')->select('id')->like('modelo', $modelo)->limit(1)->get()->getRowArray();
+                }
+
+                if (!$moto) {
+                    if (!in_array($modelo, $rawInserted, true)) {
+                        $db->table('modelos_detectados_raw')->insert([
+                            'texto_detectado' => $modelo,
+                            'nombre_producto' => $p['nombre'],
+                        ]);
+                        $rawInserted[] = $modelo;
+                        $modelosNuevos++;
+                    }
+                    continue;
+                }
+
+                $motoId = (int) $moto['id'];
+
+                // Generar 3 variantes de alias
+                preg_match('/^([A-Z]+)(\d+)$/', $modelo, $parts);
+                if (!$parts) continue;
+
+                foreach ([$modelo, "{$parts[1]} {$parts[2]}", "{$parts[1]}-{$parts[2]}"] as $alias) {
+                    $cacheKey = "{$motoId}:{$alias}";
+                    if (isset($aliasInserted[$cacheKey])) continue;
+                    $aliasInserted[$cacheKey] = true;
+
+                    if ($db->table('alias_motos')->where('UPPER(alias)', strtoupper($alias))->countAllResults() > 0) continue;
+
+                    $slug = strtolower(str_replace(' ', '-', $alias));
+                    $base = $slug; $i = 1;
+                    while ($db->table('alias_motos')->where('slug', $slug)->countAllResults() > 0) {
+                        $slug = $base . '-' . $i++;
+                    }
+                    $db->table('alias_motos')->insert([
+                        'motocicleta_id' => $motoId,
+                        'alias'          => strtoupper($alias),
+                        'slug'           => $slug,
+                    ]);
+                    $aliasCreados++;
+                }
+            }
+        }
+
+        session()->setFlashdata(
+            'success',
+            "Detección completada: {$aliasCreados} aliases creados, {$modelosNuevos} modelos nuevos en revisión."
+        );
+
+        return $this->response
+            ->setHeader('HX-Redirect', site_url('/import'))
+            ->setBody('');
+    }
+}

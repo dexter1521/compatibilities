@@ -87,8 +87,7 @@
                             class="form-control"
                             placeholder="balata ft150  ·  filtro cgl  ·  bujia fz150"
                             x-model="q"
-                            autocomplete="off"
-                        >
+                            autocomplete="off">
                         <div class="input-group-append">
                             <button class="btn btn-primary" type="submit" :disabled="q.trim().length < 2">
                                 Buscar
@@ -108,37 +107,37 @@
             </div>
             <div class="card-body p-0">
                 <?php if (empty($ultimosImports)): ?>
-                <p class="text-muted text-center py-4 mb-0">Sin importaciones — <a href="<?= site_url('/import') ?>">subir Excel</a></p>
+                    <p class="text-muted text-center py-4 mb-0">Sin importaciones — <a href="<?= site_url('/import') ?>">subir Excel</a></p>
                 <?php else: ?>
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead>
-                            <tr>
-                                <th>Archivo</th>
-                                <th class="text-right">Items</th>
-                                <th>Estado</th>
-                                <th class="text-right">Errores</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        <?php foreach ($ultimosImports as $job):
-                            $badge = match($job['estado']) {
-                                'finalizado' => 'success',
-                                'error'      => 'danger',
-                                'procesando' => 'warning',
-                                default      => 'secondary',
-                            };
-                        ?>
-                            <tr>
-                                <td><?= esc($job['archivo_nombre']) ?></td>
-                                <td class="text-right"><?= (int)$job['procesados'] ?>/<?= (int)$job['total_items'] ?></td>
-                                <td><span class="badge badge-<?= $badge ?>"><?= esc(ucfirst($job['estado'])) ?></span></td>
-                                <td class="text-right text-danger"><?= (int)$job['errores'] ?: '—' ?></td>
-                            </tr>
-                        <?php endforeach ?>
-                        </tbody>
-                    </table>
-                </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Archivo</th>
+                                    <th class="text-right">Items</th>
+                                    <th>Estado</th>
+                                    <th class="text-right">Errores</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($ultimosImports as $job):
+                                    $badge = match ($job['estado']) {
+                                        'finalizado' => 'success',
+                                        'error'      => 'danger',
+                                        'procesando' => 'warning',
+                                        default      => 'secondary',
+                                    };
+                                ?>
+                                    <tr>
+                                        <td><?= esc($job['archivo_nombre']) ?></td>
+                                        <td class="text-right"><?= (int)$job['procesados'] ?>/<?= (int)$job['total_items'] ?></td>
+                                        <td><span class="badge badge-<?= $badge ?>"><?= esc(ucfirst($job['estado'])) ?></span></td>
+                                        <td class="text-right text-danger"><?= (int)$job['errores'] ?: '—' ?></td>
+                                    </tr>
+                                <?php endforeach ?>
+                            </tbody>
+                        </table>
+                    </div>
                 <?php endif ?>
             </div>
         </div>
@@ -155,18 +154,18 @@
             </div>
             <div class="card-body p-0">
                 <?php if (empty($topBusquedas)): ?>
-                <p class="text-muted text-center py-4 mb-0">Sin registros</p>
+                    <p class="text-muted text-center py-4 mb-0">Sin registros</p>
                 <?php else:
                     $maxC = max(array_column($topBusquedas, 'contador')) ?: 1;
                 ?>
-                <ul class="list-group list-group-flush">
-                <?php foreach ($topBusquedas as $b): ?>
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span style="font-size:13px;"><?= esc($b['termino']) ?></span>
-                        <span class="badge badge-danger badge-pill"><?= (int)$b['contador'] ?></span>
-                    </li>
-                <?php endforeach ?>
-                </ul>
+                    <ul class="list-group list-group-flush">
+                        <?php foreach ($topBusquedas as $b): ?>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span style="font-size:13px;"><?= esc($b['termino']) ?></span>
+                                <span class="badge badge-danger badge-pill"><?= (int)$b['contador'] ?></span>
+                            </li>
+                        <?php endforeach ?>
+                    </ul>
                 <?php endif ?>
             </div>
         </div>

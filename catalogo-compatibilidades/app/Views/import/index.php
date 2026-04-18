@@ -222,13 +222,29 @@
             <i class='bx bx-error-circle' style="color:#f97316;margin-right:6px;"></i>
             Productos pendientes de enriquecimiento
         </span>
-        <button
-            class="btn-detail"
-            hx-get="<?= site_url('/import/pendientes') ?>"
-            hx-target="#pendientes-container"
-            hx-swap="innerHTML"
-            hx-trigger="load, click"
-        ><i class='bx bx-refresh'></i> Actualizar</button>
+        <div style="display:flex;gap:8px;align-items:center;">
+            <button
+                class="btn-detail"
+                hx-post="<?= site_url('/import/detectar-modelos') ?>"
+                hx-target="body"
+                hx-swap="none"
+                hx-confirm="¿Detectar modelos y generar aliases automáticamente?"
+                style="background:rgba(249,115,22,.09);color:var(--compat-accent);border-color:rgba(249,115,22,.3);"
+            ><i class='bx bx-purchase-tag'></i> Detectar modelos</button>
+            <button
+                class="btn-detail"
+                hx-post="<?= site_url('/import/reenrich') ?>"
+                hx-target="body"
+                hx-swap="none"
+            ><i class='bx bx-recycle'></i> Re-enriquecer</button>
+            <button
+                class="btn-detail"
+                hx-get="<?= site_url('/import/pendientes') ?>"
+                hx-target="#pendientes-container"
+                hx-swap="innerHTML"
+                hx-trigger="load, click"
+            ><i class='bx bx-refresh'></i> Actualizar</button>
+        </div>
     </div>
     <div id="pendientes-container" style="padding:16px 20px;">
         <div style="text-align:center;color:#9ca3af;font-size:13px;padding:20px 0;">

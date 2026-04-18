@@ -2,8 +2,6 @@
 
 <?= $this->section('content') ?>
 
-<?php $seg = service('uri')->getSegment(1) ?>
-
 <style>
     .crud-page-header {
         display: flex;
@@ -99,7 +97,6 @@
         padding: 11px 16px;
         border-bottom: 1px solid rgba(17, 24, 39, .09);
         background: rgba(249, 115, 22, .03);
-        white-space: nowrap;
     }
 
     .crud-table tbody td {
@@ -116,26 +113,6 @@
 
     .crud-table tbody tr:hover {
         background: rgba(249, 115, 22, .03);
-    }
-
-    .td-marca {
-        font-weight: 700;
-        color: var(--compat-accent-dark);
-    }
-
-    .td-modelo {
-        font-weight: 600;
-    }
-
-    .td-years {
-        font-size: 12.5px;
-        color: #6b7280;
-        white-space: nowrap;
-    }
-
-    .td-cc {
-        font-size: 12px;
-        color: #9ca3af;
     }
 
     .btn-tbl-edit,
@@ -187,15 +164,15 @@
 
 <div class="crud-page-header">
     <h1 class="crud-page-title">
-        <i class='bx bx-car' style="color:var(--compat-accent);margin-right:8px;vertical-align:middle;"></i>
-        Motocicletas <span>(<?= count($motos) ?>)</span>
+        <i class='bx bx-tag-alt' style="color:var(--compat-accent);margin-right:8px;vertical-align:middle;"></i>
+        Marcas <span>(<?= count($marcas) ?>)</span>
     </h1>
     <button
         class="btn-crud-new"
-        hx-get="<?= site_url('/motos/create') ?>"
+        hx-get="<?= site_url('/marcas/create') ?>"
         hx-target="#modal-content"
         hx-swap="innerHTML">
-        <i class='bx bx-plus'></i> Nueva Moto
+        <i class='bx bx-plus'></i> Nueva Marca
     </button>
 </div>
 
@@ -214,28 +191,21 @@
 
 <div class="crud-card" x-data="{ busq: '' }">
     <div class="crud-card-toolbar">
-        <input
-            type="search"
-            class="crud-search-input"
-            placeholder="Filtrar por marca o modelo…"
-            x-model="busq">
-        <span class="crud-count-badge" x-text="busq ? 'Filtrando…' : '<?= count($motos) ?> registros'"></span>
+        <input type="search" class="crud-search-input" placeholder="Filtrar por nombre…" x-model="busq">
+        <span class="crud-count-badge" x-text="busq ? 'Filtrando…' : '<?= count($marcas) ?> registros'"></span>
     </div>
-
     <div style="overflow-x:auto;">
         <table class="crud-table">
             <thead>
                 <tr>
                     <th>#</th>
-                    <th>Marca</th>
-                    <th>Modelo</th>
-                    <th>Años</th>
-                    <th>CC</th>
+                    <th>Nombre</th>
+                    <th style="text-align:center;">Estado</th>
                     <th style="text-align:right;">Acciones</th>
                 </tr>
             </thead>
-            <tbody id="motos-tbody">
-                <?= view('motos/_rows', ['motos' => $motos]) ?>
+            <tbody id="marcas-tbody">
+                <?= view('marcas/_rows', ['marcas' => $marcas]) ?>
             </tbody>
         </table>
     </div>

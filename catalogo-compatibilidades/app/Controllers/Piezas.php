@@ -52,7 +52,7 @@ class Piezas extends BaseAdminController
     {
         $post = $this->request->getPost();
 
-        if (!$this->validate(['nombre' => 'required|max_length[180]|is_unique[piezas_maestras.nombre]'])) {
+        if (!$this->validate(['nombre' => 'required|trim|max_length[180]|is_unique[piezas_maestras.nombre]'])) {
             return view('piezas/_form', [
                 'pieza'  => null,
                 'errors' => $this->validator->getErrors(),
@@ -97,7 +97,7 @@ class Piezas extends BaseAdminController
     {
         $post = $this->request->getPost();
 
-        if (!$this->validate(['nombre' => "required|max_length[180]|is_unique[piezas_maestras.nombre,id,{$id}]"])) {
+        if (!$this->validate(['nombre' => "required|trim|max_length[180]|is_unique[piezas_maestras.nombre,id,{$id}]"])) {
             return view('piezas/_form', [
                 'pieza'  => $this->model->find($id),
                 'errors' => $this->validator->getErrors(),

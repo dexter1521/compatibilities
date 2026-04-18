@@ -24,7 +24,9 @@ class ImportService
 {
     private \CodeIgniter\Database\BaseConnection $db;
 
-    private array $aliasCache = [];
+    private array $aliasCache       = [];
+    private array $piezaMaestraCache = [];
+    private array $motoLabelCache    = []; // motoId → 'MARCA-MODELO'
 
     private array $mapTipos = [
         'Filtro de Aceite'      => ['FILTRO DE ACEITE'],
@@ -87,7 +89,7 @@ class ImportService
         $safeName   = date('YmdHis') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
         $destPath   = self::UPLOAD_DIR . $safeName;
 
-        if (!move_uploaded_file($file['tmp_name'], $destPath)) {
+        if (!rename($file['tmp_name'], $destPath)) {
             return ['ok' => false, 'job_id' => null, 'error' => 'No se pudo guardar el archivo en el servidor.'];
         }
 
@@ -124,11 +126,19 @@ class ImportService
         $startFila  = $headers['skip'] + 1;
 
         foreach ($data as $i => $row) {
-            $proveedor     = trim((string)($row[$headers['proveedor']]     ?? ''));
+            $proveedor      = $headers['proveedor'] !== null
+                ? trim((string)($row[$headers['proveedor']] ?? ''))
+                : '';
             $claveProveedor = trim((string)($row[$headers['clave_proveedor']] ?? ''));
-            $nombre        = trim((string)($row[$headers['nombre']]        ?? ''));
+            $nombre         = trim((string)($row[$headers['nombre']]          ?? ''));
+            $marca          = $headers['marca'] !== null
+                ? trim((string)($row[$headers['marca']] ?? ''))
+                : '';
+            $linea          = $headers['linea'] !== null
+                ? trim((string)($row[$headers['linea']] ?? ''))
+                : '';
 
-            if ($proveedor === '' && $claveProveedor === '' && $nombre === '') {
+            if ($claveProveedor === '' && $nombre === '') {
                 continue; // fila vacía
             }
 
@@ -138,6 +148,8 @@ class ImportService
                 'proveedor'       => $proveedor,
                 'clave_proveedor' => $claveProveedor,
                 'nombre'          => $nombre,
+                'marca'           => $marca !== '' ? $marca : null,
+                'linea'           => $linea !== '' ? $linea : null,
                 'estado'          => 'pendiente',
                 'created_at'      => date('Y-m-d H:i:s'),
                 'updated_at'      => date('Y-m-d H:i:s'),
@@ -200,9 +212,11 @@ class ImportService
      */
     private function processItem(array $item): void
     {
-        $provNombre = $item['proveedor'] ?: 'Sin proveedor';
+        $provNombre = ($item['proveedor'] ?? '') !== '' ? $item['proveedor'] : 'Sin proveedor';
         $clave      = $item['clave_proveedor'];
         $nombre     = $item['nombre'];
+        $marca      = $item['marca']  ?? null;
+        $linea      = $item['linea']  ?? null;
 
         // Upsert proveedor
         $proveedor = $this->db->table('proveedores')
@@ -251,30 +265,69 @@ class ImportService
             $productoId = (int) $this->db->insertID();
         }
 
-        $this->enrichProducto($productoId, $nombre);
+        $this->enrichProducto($productoId, $nombre, $marca, $linea);
     }
 
     /**
      * Detecta qué columna índice corresponde a cada campo.
-     * Retorna ['proveedor' => idx, 'clave_proveedor' => idx, 'nombre' => idx, 'skip' => 0|1]
+     * Soporta encabezados clásicos y los del Excel de Shark Motors:
+     *   articulo → clave_proveedor, descrip → nombre, marca → marca, linea → linea
+     *
+     * @return array{proveedor:int|null,clave_proveedor:int,nombre:int,marca:int|null,linea:int|null,skip:int}
      */
     private function detectHeaders(array $firstRow): array
     {
-        $map = ['proveedor' => 0, 'clave_proveedor' => 1, 'nombre' => 2, 'skip' => 0];
+        $map = [
+            'proveedor'      => null,  // null = sin columna → usar 'Sin proveedor'
+            'clave_proveedor' => 0,
+            'nombre'         => 1,
+            'marca'          => null,
+            'linea'          => null,
+            'skip'           => 0,
+        ];
 
         $normalized = array_map('mb_strtolower', array_map('trim', $firstRow));
+        $hasHeader  = false;
 
         foreach ($normalized as $i => $cell) {
+            if ($cell === '') {
+                continue;
+            }
+            // proveedor
             if (str_contains($cell, 'proveedor') && !str_contains($cell, 'clave')) {
                 $map['proveedor'] = $i;
-                $map['skip']      = 1;
-            } elseif (str_contains($cell, 'clave')) {
-                $map['clave_proveedor'] = $i;
-                $map['skip']            = 1;
-            } elseif (str_contains($cell, 'nombre') || str_contains($cell, 'descripcion') || str_contains($cell, 'descripción')) {
-                $map['nombre'] = $i;
-                $map['skip']   = 1;
+                $hasHeader = true;
             }
+            // clave_proveedor / articulo / sku
+            elseif (in_array($cell, ['articulo', 'artículo', 'sku', 'codigo', 'código', 'clave_proveedor', 'clave'], true)
+                || str_contains($cell, 'articul')
+                || (str_contains($cell, 'clave') && !str_contains($cell, 'prov'))) {
+                $map['clave_proveedor'] = $i;
+                $hasHeader = true;
+            }
+            // nombre / descrip
+            elseif (in_array($cell, ['descrip', 'descripcion', 'descripción', 'nombre', 'producto', 'descripci'], true)
+                || str_contains($cell, 'descri')
+                || str_contains($cell, 'nombre')) {
+                $map['nombre'] = $i;
+                $hasHeader = true;
+            }
+            // marca
+            elseif ($cell === 'marca' || str_contains($cell, 'marca')) {
+                $map['marca'] = $i;
+                $hasHeader    = true;
+            }
+            // linea / tipo
+            elseif (in_array($cell, ['linea', 'línea', 'tipo', 'categoria', 'categoría', 'familia'], true)
+                || str_contains($cell, 'linea')
+                || str_contains($cell, 'línea')) {
+                $map['linea'] = $i;
+                $hasHeader    = true;
+            }
+        }
+
+        if ($hasHeader) {
+            $map['skip'] = 1;
         }
 
         return $map;
@@ -304,7 +357,8 @@ class ImportService
     private function makeSlug(string $text, string $table): string
     {
         helper('url');
-        $base = url_title(mb_strtolower($text), '-', true) ?: 'item';
+        // Truncar antes de generar para que el slug nunca exceda el constraint
+        $base = url_title(mb_strtolower(mb_substr($text, 0, 480)), '-', true) ?: 'item';
         $slug = $base;
         $i    = 1;
         while ($this->db->table($table)->where('slug', $slug)->countAllResults() > 0) {
@@ -315,15 +369,29 @@ class ImportService
 
     // ── Enriquecimiento automático ──────────────────────────────────────────
 
-    private function enrichProducto(int $productoId, string $descripcion): void
+    /**
+     * @param string|null $marcaNombre  Nombre de la marca (del Excel), usado para filtrar motos.
+     * @param string|null $lineaNombre  Nombre de la línea (del Excel), usado como tipo directo.
+     */
+    private function enrichProducto(int $productoId, string $descripcion, ?string $marcaNombre = null, ?string $lineaNombre = null): void
     {
         $desc = $this->normalize($descripcion);
 
-        // 1. detectar moto y tipo
-        $motos = $this->detectarMotos($desc);
-        $tipo  = $this->detectarTipo($desc);
+        // 1. Tipo: usar la columna linea si viene; si no, detectar del texto
+        $tipo = null;
+        if ($lineaNombre !== null && $lineaNombre !== '') {
+            $tipo = $this->resolverLinea($lineaNombre);
+        }
+        if ($tipo === null) {
+            $tipo = $this->detectarTipo($desc);
+        }
 
-        // 2. registrar estado y salir si falta alguno
+        // 2. Motos: filtrar por marca si viene
+        $motos = $marcaNombre !== null && $marcaNombre !== ''
+            ? $this->detectarMotosPorMarca($desc, $marcaNombre)
+            : $this->detectarMotos($desc);
+
+        // 3. registrar estado y salir si falta alguno
         if (!$tipo && empty($motos)) {
             $this->db->table('productos')->where('id', $productoId)->update(['enrich_estado' => 'sin_ambos']);
             return;
@@ -355,6 +423,95 @@ class ImportService
     }
 
     /**
+     * Mapea el valor de la columna "linea" del Excel al nombre canónico del tipo
+     * (clave del mapTipos). Primero busca coincidencia exacta, luego por substring.
+     */
+    private function resolverLinea(string $linea): ?string
+    {
+        $norm = $this->normalize($linea);
+
+        // Coincidencia exacta (case insensitive) con claves del mapa
+        foreach ($this->mapTipos as $tipo => $keywords) {
+            if ($this->normalize($tipo) === $norm) {
+                return $tipo;
+            }
+        }
+
+        // Coincidencia por keyword dentro del mapa
+        foreach ($this->mapTipos as $tipo => $keywords) {
+            foreach ($keywords as $kw) {
+                if (str_contains($norm, $this->normalize($kw))) {
+                    return $tipo;
+                }
+            }
+        }
+
+        // Si no coincide con ninguno conocido, devolver la linea tal cual (se creará nueva pieza maestra)
+        return $linea;
+    }
+
+    /**
+     * Detecta motocicletas filtrando alias únicamente de la marca indicada.
+     * Más preciso que detectarMotos() cuando se conoce la marca.
+     *
+     * @return int[]
+     */
+    private function detectarMotosPorMarca(string $desc, string $marcaNombre): array
+    {
+        // Buscar marca_id
+        $marca = $this->db->table('marcas')
+            ->select('id')
+            ->where('LOWER(nombre)', mb_strtolower(trim($marcaNombre)))
+            ->get()->getRowArray();
+
+        if (!$marca || $marca['id'] === null) {
+            // Fallback: búsqueda libre
+            return $this->detectarMotos($desc);
+        }
+
+        $marcaId = (int) $marca['id'];
+        $desc    = $this->normalize($desc);
+        $found   = [];
+
+        foreach ($this->getAliases() as $a) {
+            // Solo aliases de motos de esta marca
+            $motoMarcaId = $this->getMotoMarcaId((int) $a['motocicleta_id']);
+            if ($motoMarcaId !== $marcaId) {
+                continue;
+            }
+
+            $needle = $this->normalize($a['alias']);
+            if ($needle === '') {
+                continue;
+            }
+
+            if (str_contains($desc, $needle)) {
+                $motoId = (int) $a['motocicleta_id'];
+                if (!in_array($motoId, $found, true)) {
+                    $found[] = $motoId;
+                }
+            }
+        }
+
+        return $found;
+    }
+
+    /** Cache de motocicleta_id → marca_id para no repetir queries. */
+    private array $motoMarcaCache = [];
+
+    private function getMotoMarcaId(int $motoId): ?int
+    {
+        if (!isset($this->motoMarcaCache[$motoId])) {
+            $row = $this->db->table('motocicletas')
+                ->select('marca_id')
+                ->where('id', $motoId)
+                ->get()->getRowArray();
+            $this->motoMarcaCache[$motoId] = $row ? (int) $row['marca_id'] : null;
+        }
+        return $this->motoMarcaCache[$motoId];
+    }
+
+    /**
      * Reintenta el enriquecimiento de todos los productos pendientes (enrich_estado != 'ok').
      * Limpia el aliasCache para tomar los aliases recién agregados.
      *
@@ -363,10 +520,13 @@ class ImportService
     public function reenrichPendientes(): array
     {
         // Limpiar cache para que detectarMotos() vea los aliases nuevos
-        $this->aliasCache = [];
+        $this->aliasCache        = [];
+        $this->motoMarcaCache    = [];
+        $this->piezaMaestraCache = [];
+        $this->motoLabelCache    = [];
 
         $productos = $this->db->table('productos')
-            ->select('id, nombre')
+            ->select('id, nombre, clave_proveedor, proveedor_id')
             ->whereIn('enrich_estado', ['sin_tipo', 'sin_moto', 'sin_ambos'])
             ->orWhere('enrich_estado IS NULL')
             ->get()->getResultArray();
@@ -375,10 +535,19 @@ class ImportService
         $pendientes = 0;
 
         foreach ($productos as $p) {
-            $estadoAntes = $p['enrich_estado'] ?? null;
-            $this->enrichProducto((int) $p['id'], $p['nombre']);
+            // Recuperar marca/linea del import_item original si existe
+            $item = $this->db->table('import_items')
+                ->select('marca, linea')
+                ->where('clave_proveedor', $p['clave_proveedor'])
+                ->orderBy('id', 'DESC')
+                ->limit(1)
+                ->get()->getRowArray();
 
-            // Leer estado actualizado
+            $marca = $item['marca'] ?? null;
+            $linea = $item['linea'] ?? null;
+
+            $this->enrichProducto((int) $p['id'], $p['nombre'], $marca, $linea);
+
             $nuevo = $this->db->table('productos')
                 ->select('enrich_estado')
                 ->where('id', $p['id'])
@@ -456,22 +625,49 @@ class ImportService
 
     private function getOrCreatePiezaMaestra(string $tipo, int $motoId): int
     {
+        // Clave única: tipo + marca-modelo → BAL-TRA|ITALIKA-RT200
+        $label  = $this->getMotoLabel($motoId);
+        $nombre = $tipo . '|' . $label;
+
+        if (isset($this->piezaMaestraCache[$nombre])) {
+            return $this->piezaMaestraCache[$nombre];
+        }
+
         $existing = $this->db->table('piezas_maestras')
-            ->where('nombre', $tipo)
+            ->where('nombre', $nombre)
             ->get()->getRowArray();
 
         if ($existing) {
+            $this->piezaMaestraCache[$nombre] = (int) $existing['id'];
             return (int) $existing['id'];
         }
 
-        $slug = $this->makeSlug($tipo, 'piezas_maestras');
+        $slug = $this->makeSlug($nombre, 'piezas_maestras');
         $this->db->table('piezas_maestras')->insert([
-            'nombre'     => $tipo,
+            'nombre'     => $nombre,
             'slug'       => $slug,
             'created_at' => date('Y-m-d H:i:s'),
             'updated_at' => date('Y-m-d H:i:s'),
         ]);
-        return (int) $this->db->insertID();
+        $id = (int) $this->db->insertID();
+        $this->piezaMaestraCache[$nombre] = $id;
+        return $id;
+    }
+
+    /** Devuelve 'MARCA-MODELO' para usar en el nombre de pieza_maestra. */
+    private function getMotoLabel(int $motoId): string
+    {
+        if (!isset($this->motoLabelCache[$motoId])) {
+            $row = $this->db->table('motocicletas mo')
+                ->select('UPPER(ma.nombre) as marca, UPPER(mo.modelo) as modelo')
+                ->join('marcas ma', 'ma.id = mo.marca_id')
+                ->where('mo.id', $motoId)
+                ->get()->getRowArray();
+            $this->motoLabelCache[$motoId] = $row
+                ? $row['marca'] . '-' . $row['modelo']
+                : (string) $motoId;
+        }
+        return $this->motoLabelCache[$motoId];
     }
 
     private function upsertCompatibilidad(int $piezaId, int $motoId, ?int $anioDe = null, ?int $anioHasta = null): void

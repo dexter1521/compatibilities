@@ -8,6 +8,6 @@ class MarcaModel extends Model
 {
     protected $table         = 'marcas';
     protected $primaryKey    = 'id';
-    protected $allowedFields = ['nombre', 'slug'];
+    protected $allowedFields = ['nombre', 'slug', 'activo'];
     protected $useTimestamps = true;
 }

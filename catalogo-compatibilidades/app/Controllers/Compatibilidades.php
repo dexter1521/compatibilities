@@ -129,6 +129,17 @@ class Compatibilidades extends BaseAdminController
      * @param int $id ID de la compatibilidad
      */
     public function update(int $id)
+    {
+        $post = $this->request->getPost();
+
+        if (!$this->validate([
+            'pieza_maestra_id' => 'required|is_natural_no_zero',
+            'motocicleta_id'   => 'required|is_natural_no_zero',
+        ])) {
+            return view('compatibilidades/_form', [
+                'compat' => $this->model->find($id),
+                'piezas' => $this->piezaModel->orderBy('nombre')->findAll(),
+                'motos'  => $this->motoModel->getAllWithMarca(),
                 'errors' => $this->validator->getErrors(),
                 'old'    => $post,
             ]);

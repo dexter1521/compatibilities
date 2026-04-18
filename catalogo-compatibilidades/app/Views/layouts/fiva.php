@@ -63,6 +63,12 @@
                 </li>
 
                 <li class="nav-item-title">Catálogo</li>
+                <li class="nav-item <?= $seg1 === 'marcas' ? 'mm-active' : '' ?>">
+                    <a href="<?= site_url('/marcas') ?>" class="nav-link">
+                        <span class="icon"><i class='bx bx-tag-alt'></i></span>
+                        <span class="menu-title">Marcas</span>
+                    </a>
+                </li>
                 <li class="nav-item <?= $seg1 === 'motos' ? 'mm-active' : '' ?>">
                     <a href="<?= site_url('/motos') ?>" class="nav-link">
                         <span class="icon"><i class='bx bx-car'></i></span>

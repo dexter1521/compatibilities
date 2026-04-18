@@ -59,11 +59,28 @@ class Motos extends BaseAdminController
 
         // Validación básica
         $rules = [
-            'modelo'     => 'required|max_length[150]',
+            'modelo'     => 'required|trim|max_length[150]',
             'anio_desde' => 'permit_empty|integer|greater_than[1900]|less_than[2100]',
             'anio_hasta' => 'permit_empty|integer|greater_than[1900]|less_than[2100]',
             'cilindrada' => 'permit_empty|max_length[50]',
         ];
+
+        // Validar duplicado modelo+marca antes de continuar
+        $marcaIdCheck = (int) ($post['marca_id'] ?? 0);
+        if ($marcaIdCheck > 0 && !empty($post['modelo'])) {
+            $existe = $this->motoModel
+                ->where('marca_id', $marcaIdCheck)
+                ->where('LOWER(modelo)', mb_strtolower(trim($post['modelo'])))
+                ->first();
+            if ($existe) {
+                return view('motos/_form', [
+                    'moto'   => null,
+                    'marcas' => $this->marcaModel->orderBy('nombre')->findAll(),
+                    'errors' => ['modelo' => 'Ya existe esa moto con esa marca.'],
+                    'old'    => $post,
+                ]);
+            }
+        }
 
         // Validar marca: existente o nueva
         $marcaId     = (int) ($post['marca_id'] ?? 0);
@@ -166,6 +183,24 @@ class Motos extends BaseAdminController
             'cilindrada' => 'permit_empty|max_length[50]',
         ];
 
+        // Validar duplicado modelo+marca (excluyendo el registro actual)
+        $marcaIdCheck = (int) ($post['marca_id'] ?? 0);
+        if ($marcaIdCheck > 0 && !empty($post['modelo'])) {
+            $existe = $this->motoModel
+                ->where('marca_id', $marcaIdCheck)
+                ->where('LOWER(modelo)', mb_strtolower(trim($post['modelo'])))
+                ->where('id !=', $id)
+                ->first();
+            if ($existe) {
+                return view('motos/_form', [
+                    'moto'   => $this->motoModel->getWithMarca($id),
+                    'marcas' => $this->marcaModel->orderBy('nombre')->findAll(),
+                    'errors' => ['modelo' => 'Ya existe esa moto con esa marca.'],
+                    'old'    => $post,
+                ]);
+            }
+        }
+
         if (!$this->validate($rules)) {
             return view('motos/_form', [
                 'moto'   => $this->motoModel->getWithMarca($id),
@@ -205,5 +240,85 @@ class Motos extends BaseAdminController
         return $this->response->setBody(
             view('motos/_rows', ['motos' => $this->motoModel->getAllWithMarca()])
         );
+    }
+
+    // ── Aliases ────────────────────────────────────────────────
+
+    private function getMotoOrFail(int $id): ?array
+    {
+        return $this->motoModel->getWithMarca($id);
+    }
+
+    private function getAliases(int $motoId): array
+    {
+        return \Config\Database::connect()
+            ->table('alias_motos')
+            ->where('motocicleta_id', $motoId)
+            ->orderBy('alias')
+            ->get()->getResultArray();
+    }
+
+    /** GET /motos/:id/aliases — abre el modal de gestión de aliases */
+    public function aliases(int $id): string
+    {
+        $moto = $this->getMotoOrFail($id);
+        return view('motos/_aliases', [
+            'moto'    => $moto,
+            'aliases' => $this->getAliases($id),
+            'errors'  => [],
+            'old'     => [],
+        ]);
+    }
+
+    /** POST /motos/:id/aliases/store — agrega un nuevo alias */
+    public function storeAlias(int $id)
+    {
+        $post = $this->request->getPost();
+        $moto = $this->getMotoOrFail($id);
+
+        if (!$this->validate(['alias' => "required|max_length[180]|is_unique[alias_motos.alias]"])) {
+            return view('motos/_aliases', [
+                'moto'    => $moto,
+                'aliases' => $this->getAliases($id),
+                'errors'  => $this->validator->getErrors(),
+                'old'     => $post,
+            ]);
+        }
+
+        $alias = trim($post['alias']);
+        $slug  = $this->uniqueSlug($alias, 'alias_motos');
+
+        \Config\Database::connect()->table('alias_motos')->insert([
+            'motocicleta_id' => $id,
+            'alias'          => $alias,
+            'slug'           => $slug,
+            'created_at'     => date('Y-m-d H:i:s'),
+            'updated_at'     => date('Y-m-d H:i:s'),
+        ]);
+
+        return view('motos/_aliases', [
+            'moto'    => $moto,
+            'aliases' => $this->getAliases($id),
+            'errors'  => [],
+            'old'     => [],
+        ]);
+    }
+
+    /** POST /motos/alias/:aliasId/delete — elimina un alias y devuelve la lista actualizada */
+    public function deleteAlias(int $aliasId)
+    {
+        $db    = \Config\Database::connect();
+        $row   = $db->table('alias_motos')->where('id', $aliasId)->get()->getRowArray();
+        $motoId = $row ? (int) $row['motocicleta_id'] : 0;
+
+        $db->table('alias_motos')->where('id', $aliasId)->delete();
+
+        $moto = $motoId ? $this->getMotoOrFail($motoId) : null;
+        return view('motos/_aliases', [
+            'moto'    => $moto,
+            'aliases' => $motoId ? $this->getAliases($motoId) : [],
+            'errors'  => [],
+            'old'     => [],
+        ]);
     }
 }

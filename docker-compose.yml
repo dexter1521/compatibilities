@@ -40,6 +40,21 @@ services:
     networks:
       - compat_net
 
+  pma:
+    image: phpmyadmin:latest
+    container_name: compat_pma
+    restart: unless-stopped
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "8081:80"
+    depends_on:
+      - db
+    networks:
+      - compat_net
+
 volumes:
   compat_db_data:
 

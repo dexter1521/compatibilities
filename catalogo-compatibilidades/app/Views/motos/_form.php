@@ -22,16 +22,15 @@ $v   = fn(string $k) => esc($old[$k] ?? ($moto[$k] ?? ''));
     id="moto-form"
     hx-post="<?= $action ?>"
     hx-target="#modal-content"
-    hx-swap="innerHTML"
->
+    hx-swap="innerHTML">
     <?= csrf_field() ?>
 
     <div class="modal-body" style="padding:20px;">
 
         <?php if (!empty($errors['general'])): ?>
-        <div class="alert alert-danger py-2 px-3 mb-3" style="font-size:13px;">
-            <i class='bx bx-error-circle'></i> <?= esc($errors['general']) ?>
-        </div>
+            <div class="alert alert-danger py-2 px-3 mb-3" style="font-size:13px;">
+                <i class='bx bx-error-circle'></i> <?= esc($errors['general']) ?>
+            </div>
         <?php endif ?>
 
         <!-- MARCA -->
@@ -44,13 +43,13 @@ $v   = fn(string $k) => esc($old[$k] ?? ($moto[$k] ?? ''));
                 <select name="marca_id" class="form-control <?= isset($errors['marca_id']) ? 'is-invalid' : '' ?>" style="font-size:13.5px;">
                     <option value="">— Selecciona —</option>
                     <?php foreach ($marcas as $marca): ?>
-                    <option value="<?= $marca['id'] ?>" <?= ((int)($old['marca_id'] ?? $moto['marca_id'] ?? 0) === (int)$marca['id']) ? 'selected' : '' ?>>
-                        <?= esc($marca['nombre']) ?>
-                    </option>
+                        <option value="<?= $marca['id'] ?>" <?= ((int)($old['marca_id'] ?? $moto['marca_id'] ?? 0) === (int)$marca['id']) ? 'selected' : '' ?>>
+                            <?= esc($marca['nombre']) ?>
+                        </option>
                     <?php endforeach ?>
                 </select>
                 <?php if (isset($errors['marca_id'])): ?>
-                <div class="invalid-feedback"><?= esc($errors['marca_id']) ?></div>
+                    <div class="invalid-feedback"><?= esc($errors['marca_id']) ?></div>
                 <?php endif ?>
                 <small style="cursor:pointer;color:var(--compat-accent);font-size:12px;" @click="nuevaMarca = true">
                     + Agregar nueva marca
@@ -67,8 +66,7 @@ $v   = fn(string $k) => esc($old[$k] ?? ($moto[$k] ?? ''));
                     class="form-control"
                     placeholder="Ej: Honda, Yamaha, Suzuki…"
                     value="<?= esc($old['marca_nombre'] ?? '') ?>"
-                    style="font-size:13.5px;"
-                >
+                    style="font-size:13.5px;">
                 <small style="cursor:pointer;color:#6b7280;font-size:12px;" @click="nuevaMarca = false">
                     ← Usar marca existente
                 </small>
@@ -87,10 +85,9 @@ $v   = fn(string $k) => esc($old[$k] ?? ($moto[$k] ?? ''));
                 class="form-control <?= isset($errors['modelo']) ? 'is-invalid' : '' ?>"
                 placeholder="Ej: CB125F, CG 150, FZ25…"
                 value="<?= $v('modelo') ?>"
-                style="font-size:13.5px;"
-            >
+                style="font-size:13.5px;">
             <?php if (isset($errors['modelo'])): ?>
-            <div class="invalid-feedback"><?= esc($errors['modelo']) ?></div>
+                <div class="invalid-feedback"><?= esc($errors['modelo']) ?></div>
             <?php endif ?>
         </div>
 
@@ -107,10 +104,9 @@ $v   = fn(string $k) => esc($old[$k] ?? ($moto[$k] ?? ''));
                     placeholder="2005"
                     min="1900" max="2099"
                     value="<?= $v('anio_desde') ?>"
-                    style="font-size:13.5px;"
-                >
+                    style="font-size:13.5px;">
                 <?php if (isset($errors['anio_desde'])): ?>
-                <div class="invalid-feedback"><?= esc($errors['anio_desde']) ?></div>
+                    <div class="invalid-feedback"><?= esc($errors['anio_desde']) ?></div>
                 <?php endif ?>
             </div>
             <div class="form-group col-md-6 mb-3">
@@ -124,8 +120,7 @@ $v   = fn(string $k) => esc($old[$k] ?? ($moto[$k] ?? ''));
                     placeholder="2015"
                     min="1900" max="2099"
                     value="<?= $v('anio_hasta') ?>"
-                    style="font-size:13.5px;"
-                >
+                    style="font-size:13.5px;">
             </div>
         </div>
 
@@ -140,8 +135,7 @@ $v   = fn(string $k) => esc($old[$k] ?? ($moto[$k] ?? ''));
                 class="form-control"
                 placeholder="Ej: 125cc, 150cc, 250cc…"
                 value="<?= $v('cilindrada') ?>"
-                style="font-size:13.5px;"
-            >
+                style="font-size:13.5px;">
         </div>
 
     </div><!-- modal-body -->

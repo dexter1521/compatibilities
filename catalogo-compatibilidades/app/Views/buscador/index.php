@@ -3,7 +3,7 @@
 <?= $this->section('content') ?>
 
 <style>
-    /* â”€â”€ Hero â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* —— Hero ———————————————————————————————————————————————— */
     .search-hero {
         background: #fff;
         border: 1px solid var(--compat-border);
@@ -13,7 +13,7 @@
         border-top: 4px solid var(--compat-accent);
     }
 
-    /* â”€â”€ Encabezado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* —— Encabezado ————————————————————————————————————————————— */
     .search-page-title {
         font-size: 22px;
         font-weight: 800;
@@ -30,7 +30,7 @@
         margin-bottom: 0;
     }
 
-    /* â”€â”€ Tabs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* —— Tabs ———————————————————————————————————————————————— */
     .search-tabs {
         display: flex;
         gap: 4px;
@@ -63,7 +63,7 @@
         background: rgba(249, 115, 22, .04);
     }
 
-    /* â”€â”€ Text search â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* —— Text search ————————————————————————————————————————————— */
     .search-input-wrap {
         position: relative;
     }
@@ -92,7 +92,7 @@
     }
 
     .search-input-wrap .form-control::placeholder {
-        color: #9CA3AF; /* 4.7:1 sobre blanco â€” WCAG AA âœ“ */
+        color: #9CA3AF; /* 4.7:1 sobre blanco — WCAG AA ✓ */
     }
 
     .search-input-wrap .form-control:focus {
@@ -137,7 +137,7 @@
         background: rgba(249, 115, 22, .12);
     }
 
-    /* â”€â”€ Cascade search â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* —— Cascade search ————————————————————————————————————————————— */
     .cascade-form {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -187,7 +187,7 @@
         border-color: #E5E7EB;
     }
 
-    /* â”€â”€ Indicador â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* —— Indicador ———————————————————————————————————————————————— */
     .cascade-loading {
         display: none;
         font-size: 13px;
@@ -216,7 +216,7 @@
         Buscador de <span>compatibilidades</span>
     </h1>
     <p class="search-subtitle">
-        Busca por nombre de pieza, clave o elige el modelo de tu moto para ver quÃ© refacciones son compatibles.
+        Busca por nombre de pieza, clave o elige el modelo de tu moto para ver qué refacciones son compatibles.
     </p>
 
     <!-- Tabs -->
@@ -225,7 +225,7 @@
             class="search-tab-btn"
             :class="{ active: tab === 'texto' }"
             @click="tab = 'texto'; clearResults()">
-            <i class='bx bx-search'></i> BÃºsqueda por texto
+            <i class='bx bx-search'></i> Búsqueda por texto
         </button>
         <button
             class="search-tab-btn"
@@ -276,7 +276,7 @@
                     hx-target="#select-modelo"
                     hx-swap="innerHTML"
                     hx-indicator="#cascade-indicator">
-                    <option value="">â€” Selecciona una marca â€”</option>
+                    <option value="">— Selecciona una marca —</option>
                     <?php foreach ($marcas as $m): ?>
                         <option value="<?= (int) $m['id'] ?>"><?= esc($m['nombre']) ?></option>
                     <?php endforeach; ?>
@@ -294,7 +294,7 @@
                     hx-target="#results-container"
                     hx-swap="innerHTML"
                     hx-indicator="#cascade-indicator">
-                    <option value="">â€” Primero elige una marca â€”</option>
+                    <option value="">— Primero elige una marca —</option>
                 </select>
             </div>
         </div>
@@ -333,4 +333,4 @@
 }());
 </script>
 
-<?= $this->endSection() ?>
+<?= $this->endSection() ?>
