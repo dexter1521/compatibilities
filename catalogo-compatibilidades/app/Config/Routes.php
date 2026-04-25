@@ -59,3 +59,23 @@ $routes->get('/import/job/(:num)',   'Import::jobDetail/$1');
 $routes->get('/import/pendientes',   'Import::pendientes');
 $routes->post('/import/reenrich',         'Import::reenrich');
 $routes->post('/import/detectar-modelos', 'Import::detectarModelos');
+
+// API v1
+$routes->group('api/v1', static function ($routes) {
+    // Productos
+    $routes->get('productos', 'Api\V1\ProductosController::index');
+    $routes->get('productos/(:num)', 'Api\V1\ProductosController::show/$1');
+    $routes->post('productos', 'Api\V1\ProductosController::create');
+    $routes->put('productos/(:num)', 'Api\V1\ProductosController::update/$1');
+    $routes->delete('productos/(:num)', 'Api\V1\ProductosController::delete/$1');
+
+    // Busqueda
+    $routes->get('search', 'Api\V1\SearchController::index');
+    $routes->get('search-missed', 'Api\V1\SearchController::missed');
+
+    // Compatibilidades
+    $routes->patch('compatibilidades/(:num)/confirmar', 'Api\V1\SearchController::confirmarCompatibilidad/$1');
+
+    // Importador
+    $routes->post('import/productos', 'Api\V1\ImportController::productos');
+});
