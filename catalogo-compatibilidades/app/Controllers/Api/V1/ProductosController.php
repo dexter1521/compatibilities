@@ -19,10 +19,38 @@ class ProductosController extends BaseApiController
 
     public function index(): ResponseInterface
     {
-        $page = (int) ($this->request->getGet('page') ?? 1);
-        $perPage = (int) ($this->request->getGet('per_page') ?? 20);
+        $query = [
+            'page' => (int) ($this->request->getGet('page') ?? 1),
+            'per_page' => (int) ($this->request->getGet('per_page') ?? 20),
+            'sort_by' => (string) ($this->request->getGet('sort_by') ?? 'id'),
+            'sort_dir' => strtolower((string) ($this->request->getGet('sort_dir') ?? 'desc')),
+            'q' => (string) ($this->request->getGet('q') ?? ''),
+            'proveedor_id' => $this->request->getGet('proveedor_id'),
+            'pieza_maestra_id' => $this->request->getGet('pieza_maestra_id'),
+            'activo' => $this->request->getGet('activo'),
+            'enrich_estado' => $this->request->getGet('enrich_estado'),
+        ];
 
-        return $this->respondSuccess($this->service->list($page, $perPage), 'Listado de productos obtenido.');
+        $allowedSortBy = ['id', 'nombre', 'clave_proveedor', 'created_at', 'updated_at', 'proveedor_nombre'];
+        if (!in_array($query['sort_by'], $allowedSortBy, true)) {
+            return $this->respondValidationErrors([
+                'sort_by' => ['Valor no permitido.'],
+            ]);
+        }
+        if (!in_array($query['sort_dir'], ['asc', 'desc'], true)) {
+            return $this->respondValidationErrors([
+                'sort_dir' => ['Valor no permitido.'],
+            ]);
+        }
+
+        $allowedEnrich = [null, '', 'ok', 'sin_tipo', 'sin_moto', 'sin_ambos'];
+        if (!in_array($query['enrich_estado'], $allowedEnrich, true)) {
+            return $this->respondValidationErrors([
+                'enrich_estado' => ['Valor no permitido.'],
+            ]);
+        }
+
+        return $this->respondSuccess($this->service->list($query), 'Listado de productos obtenido.');
     }
 
     public function show(int $id): ResponseInterface

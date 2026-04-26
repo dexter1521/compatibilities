@@ -20,6 +20,7 @@ class SearchController extends BaseApiController
     public function index(): ResponseInterface
     {
         $term = trim((string) ($this->request->getGet('q') ?? ''));
+        $limit = (int) ($this->request->getGet('limit') ?? 50);
 
         if ($term === '' || mb_strlen($term) < 2) {
             return $this->respondValidationErrors([
@@ -27,22 +28,48 @@ class SearchController extends BaseApiController
             ]);
         }
 
-        $results = $this->service->search($term);
+        if ($limit < 1 || $limit > 50) {
+            return $this->respondValidationErrors([
+                'limit' => ['Debe estar entre 1 y 50.'],
+            ]);
+        }
+
+        $results = $this->service->search($term, $limit);
 
         return $this->respondSuccess([
-            'q'        => $term,
-            'total'    => count($results),
-            'results'  => $results,
+            'items' => $results,
+            'meta'  => [
+                'q' => $term,
+                'limit' => $limit,
+                'total' => count($results),
+                'timezone' => config('App')->appTimezone ?: 'UTC',
+            ],
         ], 'Búsqueda completada.');
     }
 
     public function missed(): ResponseInterface
     {
-        $limit = (int) ($this->request->getGet('limit') ?? 100);
+        $query = [
+            'page' => (int) ($this->request->getGet('page') ?? 1),
+            'per_page' => (int) ($this->request->getGet('per_page') ?? 50),
+            'sort_by' => (string) ($this->request->getGet('sort_by') ?? 'contador'),
+            'sort_dir' => strtolower((string) ($this->request->getGet('sort_dir') ?? 'desc')),
+            'q' => (string) ($this->request->getGet('q') ?? ''),
+        ];
 
-        return $this->respondSuccess([
-            'items' => $this->service->listSearchMissed($limit),
-        ], 'Búsquedas no encontradas obtenidas.');
+        $allowedSortBy = ['contador', 'ultima_busqueda_at', 'created_at'];
+        if (!in_array($query['sort_by'], $allowedSortBy, true)) {
+            return $this->respondValidationErrors([
+                'sort_by' => ['Valor no permitido.'],
+            ]);
+        }
+        if (!in_array($query['sort_dir'], ['asc', 'desc'], true)) {
+            return $this->respondValidationErrors([
+                'sort_dir' => ['Valor no permitido.'],
+            ]);
+        }
+
+        return $this->respondSuccess($this->service->listSearchMissed($query), 'Búsquedas no encontradas obtenidas.');
     }
 
     public function confirmarCompatibilidad(int $id): ResponseInterface

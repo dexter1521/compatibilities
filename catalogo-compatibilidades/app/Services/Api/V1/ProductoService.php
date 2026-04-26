@@ -11,31 +11,72 @@ class ProductoService
 {
     private BaseConnection $db;
     private ProductoModel $productoModel;
+    private string $timezone;
 
     public function __construct()
     {
         $this->db = \Config\Database::connect();
         $this->productoModel = new ProductoModel();
+        $this->timezone = config('App')->appTimezone ?: 'UTC';
     }
 
-    public function list(int $page = 1, int $perPage = 20): array
+    public function list(array $query = []): array
     {
-        $page = max(1, $page);
-        $perPage = max(1, min($perPage, 100));
+        $page = max(1, (int) ($query['page'] ?? 1));
+        $perPage = max(1, min((int) ($query['per_page'] ?? 20), 100));
         $offset = ($page - 1) * $perPage;
+        $sortBy = (string) ($query['sort_by'] ?? 'id');
+        $sortDir = strtoupper((string) ($query['sort_dir'] ?? 'DESC')) === 'ASC' ? 'ASC' : 'DESC';
+        $q = trim((string) ($query['q'] ?? ''));
+        $proveedorId = isset($query['proveedor_id']) ? (int) $query['proveedor_id'] : null;
+        $piezaMaestraId = isset($query['pieza_maestra_id']) ? (int) $query['pieza_maestra_id'] : null;
+        $activo = isset($query['activo']) ? (int) $query['activo'] : null;
+        $enrichEstado = isset($query['enrich_estado']) ? trim((string) $query['enrich_estado']) : null;
+
+        $sortMap = [
+            'id' => 'p.id',
+            'nombre' => 'p.nombre',
+            'clave_proveedor' => 'p.clave_proveedor',
+            'created_at' => 'p.created_at',
+            'updated_at' => 'p.updated_at',
+            'proveedor_nombre' => 'pr.nombre',
+        ];
+        $orderColumn = $sortMap[$sortBy] ?? $sortMap['id'];
 
         $builder = $this->db->table('productos p')
             ->select('p.id, p.clave_proveedor, p.nombre, p.activo, p.enrich_estado, p.created_at, p.updated_at, p.proveedor_id, p.pieza_maestra_id, pr.nombre AS proveedor_nombre, pm.nombre AS pieza_nombre')
             ->join('proveedores pr', 'pr.id = p.proveedor_id', 'left')
             ->join('piezas_maestras pm', 'pm.id = p.pieza_maestra_id', 'left');
 
+        if ($q !== '') {
+            $builder->groupStart()
+                ->like('p.nombre', $q)
+                ->orLike('p.clave_proveedor', $q)
+                ->orLike('pr.nombre', $q)
+                ->groupEnd();
+        }
+        if ($proveedorId !== null && $proveedorId > 0) {
+            $builder->where('p.proveedor_id', $proveedorId);
+        }
+        if ($piezaMaestraId !== null && $piezaMaestraId > 0) {
+            $builder->where('p.pieza_maestra_id', $piezaMaestraId);
+        }
+        if ($activo !== null && in_array($activo, [0, 1], true)) {
+            $builder->where('p.activo', $activo);
+        }
+        if ($enrichEstado !== null && $enrichEstado !== '') {
+            $builder->where('p.enrich_estado', $enrichEstado);
+        }
+
         $total = (clone $builder)->countAllResults();
 
         $items = $builder
-            ->orderBy('p.id', 'DESC')
+            ->orderBy($orderColumn, $sortDir)
             ->limit($perPage, $offset)
             ->get()
             ->getResultArray();
+
+        $items = array_map(fn(array $item): array => $this->formatProductoRow($item), $items);
 
         return [
             'items' => $items,
@@ -44,6 +85,16 @@ class ProductoService
                 'per_page'  => $perPage,
                 'total'     => $total,
                 'last_page' => (int) ceil($total / $perPage),
+                'sort_by'   => $sortBy,
+                'sort_dir'  => strtolower($sortDir),
+                'filters'   => [
+                    'q' => $q !== '' ? $q : null,
+                    'proveedor_id' => $proveedorId,
+                    'pieza_maestra_id' => $piezaMaestraId,
+                    'activo' => $activo,
+                    'enrich_estado' => $enrichEstado !== '' ? $enrichEstado : null,
+                ],
+                'timezone'  => $this->timezone,
             ],
         ];
     }
@@ -58,7 +109,7 @@ class ProductoService
             ->get()
             ->getRowArray();
 
-        return $row ?: null;
+        return $row ? $this->formatProductoRow($row) : null;
     }
 
     public function create(array $payload): int
@@ -116,5 +167,24 @@ class ProductoService
             $slug = $base . '-' . $i;
             $i++;
         }
+    }
+
+    private function formatProductoRow(array $row): array
+    {
+        $row['created_at'] = $this->formatDateTime($row['created_at'] ?? null);
+        $row['updated_at'] = $this->formatDateTime($row['updated_at'] ?? null);
+
+        return $row;
+    }
+
+    private function formatDateTime(?string $value): ?string
+    {
+        if ($value === null || trim($value) === '') {
+            return null;
+        }
+
+        $dt = new \DateTimeImmutable($value, new \DateTimeZone($this->timezone));
+
+        return $dt->format(\DateTimeInterface::ATOM);
     }
 }

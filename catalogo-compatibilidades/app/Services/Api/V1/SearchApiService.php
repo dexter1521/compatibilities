@@ -11,16 +11,28 @@ class SearchApiService
 {
     private SearchModel $searchModel;
     private BaseConnection $db;
+    private string $timezone;
 
     public function __construct()
     {
         $this->searchModel = new SearchModel();
         $this->db = \Config\Database::connect();
+        $this->timezone = config('App')->appTimezone ?: 'UTC';
     }
 
-    public function search(string $term): array
+    public function search(string $term, int $limit = 50): array
     {
-        return $this->searchModel->searchByTerm($term);
+        $items = $this->searchModel->searchByTerm($term);
+        $items = array_slice($items, 0, max(1, min($limit, 50)));
+
+        return array_map(function (array $item): array {
+            $item['compatibilidades'] = array_map(function (array $compat): array {
+                $compat['score_relevancia'] = (int) ($compat['contador_confirmaciones'] ?? 0);
+                return $compat;
+            }, $item['compatibilidades'] ?? []);
+
+            return $item;
+        }, $items);
     }
 
     public function confirmCompatibilidad(int $id): ?array
@@ -54,17 +66,78 @@ class SearchApiService
             'id'                      => $id,
             'confirmada'              => 1,
             'contador_confirmaciones' => $nuevoContador,
+            'score_relevancia'        => $nuevoContador,
+            'updated_at'              => $this->formatDateTime(date('Y-m-d H:i:s')),
         ];
     }
 
-    public function listSearchMissed(int $limit = 100): array
+    public function listSearchMissed(array $query = []): array
     {
-        return $this->db->table('busquedas_no_encontradas')
+        $page = max(1, (int) ($query['page'] ?? 1));
+        $perPage = max(1, min((int) ($query['per_page'] ?? 50), 200));
+        $offset = ($page - 1) * $perPage;
+        $sortBy = (string) ($query['sort_by'] ?? 'contador');
+        $sortDir = strtoupper((string) ($query['sort_dir'] ?? 'DESC')) === 'ASC' ? 'ASC' : 'DESC';
+        $q = trim((string) ($query['q'] ?? ''));
+
+        $sortMap = [
+            'contador' => 'contador',
+            'ultima_busqueda_at' => 'ultima_busqueda_at',
+            'created_at' => 'created_at',
+        ];
+        $orderColumn = $sortMap[$sortBy] ?? $sortMap['contador'];
+
+        $builder = $this->db->table('busquedas_no_encontradas')
             ->select('id, termino, termino_normalizado, contador, ultima_busqueda_at, created_at, updated_at')
-            ->orderBy('contador', 'DESC')
-            ->orderBy('ultima_busqueda_at', 'DESC')
-            ->limit(max(1, min($limit, 500)))
+            ->orderBy($orderColumn, $sortDir);
+
+        if ($q !== '') {
+            $builder->groupStart()
+                ->like('termino', $q)
+                ->orLike('termino_normalizado', mb_strtolower($q))
+                ->groupEnd();
+        }
+
+        $total = (clone $builder)->countAllResults();
+
+        $items = $builder
+            ->limit($perPage, $offset)
             ->get()
             ->getResultArray();
+
+        $items = array_map(function (array $row): array {
+            $row['ultima_busqueda_at'] = $this->formatDateTime($row['ultima_busqueda_at'] ?? null);
+            $row['created_at'] = $this->formatDateTime($row['created_at'] ?? null);
+            $row['updated_at'] = $this->formatDateTime($row['updated_at'] ?? null);
+
+            return $row;
+        }, $items);
+
+        return [
+            'items' => $items,
+            'meta' => [
+                'page' => $page,
+                'per_page' => $perPage,
+                'total' => $total,
+                'last_page' => (int) ceil($total / $perPage),
+                'sort_by' => $sortBy,
+                'sort_dir' => strtolower($sortDir),
+                'filters' => [
+                    'q' => $q !== '' ? $q : null,
+                ],
+                'timezone' => $this->timezone,
+            ],
+        ];
+    }
+
+    private function formatDateTime(?string $value): ?string
+    {
+        if ($value === null || trim($value) === '') {
+            return null;
+        }
+
+        $dt = new \DateTimeImmutable($value, new \DateTimeZone($this->timezone));
+
+        return $dt->format(\DateTimeInterface::ATOM);
     }
 }
