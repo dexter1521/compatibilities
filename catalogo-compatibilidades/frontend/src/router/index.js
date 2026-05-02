@@ -3,6 +3,11 @@ import { useAuthStore } from '../stores/auth'
 import LoginView from '../views/LoginView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import SearchView from '../views/SearchView.vue'
+import ProductosView from '../views/ProductosView.vue'
+import MotocicletasView from '../views/MotocicletasView.vue'
+import PiezasView from '../views/PiezasView.vue'
+import CompatibilidadesView from '../views/CompatibilidadesView.vue'
+import ImportView from '../views/ImportView.vue'
 
 const router = createRouter({
   history: createWebHistory('/app/'),
@@ -14,7 +19,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
       children: [
         { path: '', name: 'home', component: SearchView },
-        { path: 'buscador', name: 'buscador', component: SearchView }
+        { path: 'buscador', name: 'buscador', component: SearchView },
+        { path: 'productos', name: 'productos', component: ProductosView },
+        { path: 'motocicletas', name: 'motocicletas', component: MotocicletasView },
+        { path: 'piezas', name: 'piezas', component: PiezasView },
+        { path: 'compatibilidades', name: 'compatibilidades', component: CompatibilidadesView },
+        { path: 'import', name: 'import', component: ImportView }
       ]
     }
   ]

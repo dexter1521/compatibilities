@@ -8,6 +8,11 @@
       <nav>
         <RouterLink to="/">Buscador</RouterLink>
         <RouterLink to="/buscador">Búsqueda</RouterLink>
+        <RouterLink to="/productos">Productos</RouterLink>
+        <RouterLink to="/motocicletas">Motocicletas</RouterLink>
+        <RouterLink to="/piezas">Piezas</RouterLink>
+        <RouterLink to="/compatibilidades">Compatibilidades</RouterLink>
+        <RouterLink to="/import">Importador</RouterLink>
       </nav>
     </aside>
 
