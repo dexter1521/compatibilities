@@ -168,6 +168,22 @@ docker exec compat_db mariadb -u compat -pcompat123 compatibilidades
 # Reconstruir contenedor tras cambios en Dockerfile
 docker compose up -d --build app
 ```
+
+---
+
+## Estado SPA Interna
+
+Se inició la migración a SPA para uso interno.
+
+- Entrada SPA servida por CI4 en: `http://localhost:8080/app`
+- Código fuente SPA: `frontend/`
+- Build publicado por Vite: `public/spa/`
+- API consumida por SPA: `http://localhost:8080/api/v1`
+
+Para detalle técnico de avances y decisiones, ver:
+
+- `docs/BITACORA_SPA_API_2026-05-02.md`
+
 Problems with it can be raised on our forum, or as issues in the main repository.
 
 ## Server Requirements
