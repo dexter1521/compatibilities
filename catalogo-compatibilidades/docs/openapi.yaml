@@ -1,8 +1,8 @@
-openapi: 3.0.3
+﻿openapi: 3.0.3
 info:
   title: Shark Compatibility Engine API
   version: 1.0.0
-  description: API REST para catálogo de compatibilidades Shark Motors.
+  description: API REST del catálogo de compatibilidades Shark Motors (v1, sin breaking changes).
 servers:
   - url: http://localhost:8080
 security:
@@ -14,31 +14,141 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
-    ApiSuccess:
+    ApiEnvelopeSuccess:
       type: object
+      required: [status, success, data, message, errors]
       properties:
-        status: { type: integer, example: 200 }
-        success: { type: boolean, example: true }
-        data: {}
-        message: { type: string, example: Consulta exitosa }
-        errors:
-          nullable: true
-          type: object
-    ApiError:
-      type: object
-      properties:
-        status: { type: integer, example: 422 }
-        success: { type: boolean, example: false }
+        status:
+          type: integer
+          example: 200
+        success:
+          type: boolean
+          example: true
         data:
           nullable: true
-        message: { type: string, example: Validación fallida }
+        message:
+          type: string
+          example: Consulta exitosa
+        errors:
+          nullable: true
+          type: object
+          example: null
+    ApiEnvelopeError:
+      type: object
+      required: [status, success, data, message, errors]
+      properties:
+        status:
+          type: integer
+          example: 422
+        success:
+          type: boolean
+          example: false
+        data:
+          nullable: true
+          example: null
+        message:
+          type: string
+          example: Validación fallida
         errors:
           type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          example:
+            email: ["El campo email es obligatorio."]
+    MetaPaginacion:
+      type: object
+      properties:
+        page: { type: integer, example: 1 }
+        per_page: { type: integer, example: 20 }
+        total: { type: integer, example: 125 }
+        last_page: { type: integer, example: 7 }
+        sort_by: { type: string, example: id }
+        sort_dir: { type: string, example: desc }
+        filters:
+          type: object
+          additionalProperties: true
+        timezone: { type: string, example: UTC }
+    Producto:
+      type: object
+      properties:
+        id: { type: integer, example: 10 }
+        proveedor_id: { type: integer, example: 1 }
+        proveedor_nombre: { type: string, nullable: true, example: DID }
+        pieza_maestra_id: { type: integer, nullable: true, example: 7 }
+        pieza_nombre: { type: string, nullable: true, example: Balatas delanteras }
+        clave_proveedor: { type: string, example: BB-123 }
+        nombre: { type: string, example: Balata Delantera Italika FT150 }
+        activo: { type: integer, example: 1 }
+        enrich_estado: { type: string, nullable: true, example: ok }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time, nullable: true }
+    SearchMeta:
+      type: object
+      properties:
+        q: { type: string, example: ft150 balata }
+        limit: { type: integer, example: 20 }
+        total: { type: integer, example: 3 }
+        timezone: { type: string, example: UTC }
+  responses:
+    Unauthorized:
+      description: No autenticado o token inválido
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiEnvelopeError'
+          example:
+            status: 401
+            success: false
+            data: null
+            message: Token requerido.
+            errors:
+              authorization: [bearer token requerido]
+    Forbidden:
+      description: Rol insuficiente
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiEnvelopeError'
+          example:
+            status: 403
+            success: false
+            data: null
+            message: No tienes permisos para realizar esta acción.
+            errors:
+              authorization: [rol insuficiente]
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiEnvelopeError'
+    ValidationError:
+      description: Error de validación
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiEnvelopeError'
+    TooManyRequests:
+      description: Rate limit excedido
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiEnvelopeError'
+          example:
+            status: 429
+            success: false
+            data: null
+            message: Demasiadas solicitudes. Intenta en un minuto.
+            errors:
+              rate_limit: [excedido]
+
 paths:
   /api/v1/auth/login:
     post:
       security: []
-      summary: Login
+      summary: Iniciar sesión
       requestBody:
         required: true
         content:
@@ -48,14 +158,42 @@ paths:
               required: [email, password]
               properties:
                 email: { type: string, format: email }
-                password: { type: string }
+                password: { type: string, minLength: 6 }
+            example:
+              email: admin@sharkmotors.local
+              password: Admin123!
       responses:
-        '200': { description: OK }
-        '401': { description: Credenciales inválidas }
+        '200':
+          description: Login exitoso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelopeSuccess'
+              example:
+                status: 200
+                success: true
+                data:
+                  user:
+                    id: 1
+                    role_id: 1
+                    nombre: Administrador API
+                    email: admin@sharkmotors.local
+                    activo: 1
+                    role_slug: admin
+                  access_token: <jwt>
+                  refresh_token: <refresh>
+                  token_type: Bearer
+                  expires_in: 3600
+                message: Login exitoso.
+                errors: null
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
   /api/v1/auth/refresh:
     post:
       security: []
-      summary: Refresh token
+      summary: Refrescar access token
       requestBody:
         required: true
         content:
@@ -66,17 +204,27 @@ paths:
               properties:
                 refresh_token: { type: string }
       responses:
-        '200': { description: OK }
-        '401': { description: Token inválido }
+        '200': { description: Refresh exitoso }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
   /api/v1/auth/me:
     get:
-      summary: Usuario autenticado
+      summary: Obtener usuario autenticado
       responses:
-        '200': { description: OK }
-        '401': { description: No autenticado }
+        '200':
+          description: Usuario autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelopeSuccess'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
   /api/v1/auth/logout:
     post:
-      summary: Logout
+      summary: Cerrar sesión (revoca refresh token si se envía)
       requestBody:
         required: false
         content:
@@ -86,118 +234,337 @@ paths:
               properties:
                 refresh_token: { type: string }
       responses:
-        '200': { description: OK }
-
-  /api/v1/search:
-    get:
-      summary: Búsqueda inteligente
-      parameters:
-        - in: query
-          name: q
-          required: true
-          schema: { type: string }
-        - in: query
-          name: limit
-          schema: { type: integer, minimum: 1, maximum: 50 }
-      responses:
-        '200': { description: OK }
-  /api/v1/compatibilidades/{id}/confirmar:
-    patch:
-      summary: Confirmar compatibilidad
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: integer }
-      responses:
-        '200': { description: OK }
-        '403': { description: Rol insuficiente }
+        '200': { description: Logout exitoso }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /api/v1/productos:
     get:
       summary: Listar productos
+      parameters:
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: per_page, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+        - { in: query, name: sort_by, schema: { type: string, enum: [id, nombre, clave_proveedor, created_at, updated_at, proveedor_nombre], default: id } }
+        - { in: query, name: sort_dir, schema: { type: string, enum: [asc, desc], default: desc } }
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: proveedor_id, schema: { type: integer } }
+        - { in: query, name: pieza_maestra_id, schema: { type: integer } }
+        - { in: query, name: activo, schema: { type: integer, enum: [0, 1] } }
+        - { in: query, name: enrich_estado, schema: { type: string, enum: [ok, sin_tipo, sin_moto, sin_ambos] } }
       responses:
-        '200': { description: OK }
+        '200':
+          description: Listado paginado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelopeSuccess'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Producto'
+                          meta:
+                            $ref: '#/components/schemas/MetaPaginacion'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
     post:
       summary: Crear producto (admin)
       responses:
         '201': { description: Creado }
-        '403': { description: Rol insuficiente }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { description: Duplicado proveedor+clave }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
   /api/v1/productos/{id}:
     get:
       summary: Ver producto
       parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: integer }
+        - { in: path, name: id, required: true, schema: { type: integer } }
       responses:
         '200': { description: OK }
-        '404': { description: No encontrado }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
     put:
       summary: Actualizar producto (admin)
       parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: integer }
+        - { in: path, name: id, required: true, schema: { type: integer } }
       responses:
         '200': { description: OK }
-        '403': { description: Rol insuficiente }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: Duplicado proveedor+clave }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
     delete:
       summary: Eliminar producto (admin)
       parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: integer }
+        - { in: path, name: id, required: true, schema: { type: integer } }
       responses:
         '200': { description: OK }
-        '403': { description: Rol insuficiente }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /api/v1/search:
+    get:
+      summary: Búsqueda de compatibilidades
+      parameters:
+        - { in: query, name: q, required: true, schema: { type: string, minLength: 2 } }
+        - { in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 50, default: 50 } }
+      responses:
+        '200':
+          description: Resultados de búsqueda
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelopeSuccess'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              type: object
+                              additionalProperties: true
+                          meta:
+                            $ref: '#/components/schemas/SearchMeta'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /api/v1/search-missed:
+    get:
+      summary: Listado de búsquedas no encontradas (admin)
+      parameters:
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: per_page, schema: { type: integer, minimum: 1, maximum: 200, default: 50 } }
+        - { in: query, name: sort_by, schema: { type: string, enum: [contador, ultima_busqueda_at, created_at], default: contador } }
+        - { in: query, name: sort_dir, schema: { type: string, enum: [asc, desc], default: desc } }
+        - { in: query, name: q, schema: { type: string } }
+      responses:
+        '200': { description: OK }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /api/v1/compatibilidades/{id}/confirmar:
+    patch:
+      summary: Confirmar compatibilidad (admin|vendedor)
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: Confirmación realizada }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /api/v1/motocicletas:
-    get: { summary: Listar motocicletas, responses: { '200': { description: OK } } }
-    post: { summary: Crear motocicleta (admin), responses: { '201': { description: Creado }, '403': { description: Rol insuficiente } } }
+    get:
+      summary: Listar motocicletas
+      responses:
+        '200': { description: OK }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+    post:
+      summary: Crear motocicleta (admin)
+      responses:
+        '201': { description: Creado }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
   /api/v1/motocicletas/{id}:
-    get: { summary: Ver motocicleta, responses: { '200': { description: OK }, '404': { description: No encontrada } } }
-    put: { summary: Actualizar motocicleta (admin), responses: { '200': { description: OK }, '403': { description: Rol insuficiente } } }
-    delete: { summary: Eliminar motocicleta (admin), responses: { '200': { description: OK }, '403': { description: Rol insuficiente } } }
+    get:
+      summary: Ver motocicleta
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: OK }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+    put:
+      summary: Actualizar motocicleta (admin)
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: OK }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+    delete:
+      summary: Eliminar motocicleta (admin)
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: OK }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /api/v1/piezas:
-    get: { summary: Listar piezas, responses: { '200': { description: OK } } }
-    post: { summary: Crear pieza (admin), responses: { '201': { description: Creado }, '403': { description: Rol insuficiente } } }
+    get:
+      summary: Listar piezas
+      responses:
+        '200': { description: OK }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+    post:
+      summary: Crear pieza (admin)
+      responses:
+        '201': { description: Creado }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
   /api/v1/piezas/{id}:
-    get: { summary: Ver pieza, responses: { '200': { description: OK }, '404': { description: No encontrada } } }
-    put: { summary: Actualizar pieza (admin), responses: { '200': { description: OK }, '403': { description: Rol insuficiente } } }
-    delete: { summary: Eliminar pieza (admin), responses: { '200': { description: OK }, '403': { description: Rol insuficiente } } }
+    get:
+      summary: Ver pieza
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: OK }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+    put:
+      summary: Actualizar pieza (admin)
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: OK }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+    delete:
+      summary: Eliminar pieza (admin)
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: OK }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /api/v1/aliases:
-    get: { summary: Listar aliases, responses: { '200': { description: OK } } }
-    post: { summary: Crear alias (admin), responses: { '201': { description: Creado }, '403': { description: Rol insuficiente } } }
+    get:
+      summary: Listar aliases
+      responses:
+        '200': { description: OK }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+    post:
+      summary: Crear alias (admin)
+      responses:
+        '201': { description: Creado }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
   /api/v1/aliases/{id}:
-    delete: { summary: Eliminar alias (admin), responses: { '200': { description: OK }, '403': { description: Rol insuficiente } } }
+    delete:
+      summary: Eliminar alias (admin)
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: OK }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /api/v1/compatibilidades:
-    get: { summary: Listar compatibilidades, responses: { '200': { description: OK } } }
-    post: { summary: Crear compatibilidad (admin), responses: { '201': { description: Creado }, '403': { description: Rol insuficiente } } }
+    get:
+      summary: Listar compatibilidades
+      responses:
+        '200': { description: OK }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+    post:
+      summary: Crear compatibilidad (admin)
+      responses:
+        '201': { description: Creado }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { description: Duplicado pieza+moto }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
   /api/v1/compatibilidades/{id}:
-    get: { summary: Ver compatibilidad, responses: { '200': { description: OK }, '404': { description: No encontrada } } }
-    put: { summary: Actualizar compatibilidad (admin), responses: { '200': { description: OK }, '403': { description: Rol insuficiente } } }
-    delete: { summary: Eliminar compatibilidad (admin), responses: { '200': { description: OK }, '403': { description: Rol insuficiente } } }
+    get:
+      summary: Ver compatibilidad
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: OK }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+    put:
+      summary: Actualizar compatibilidad (admin)
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: OK }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: Duplicado pieza+moto }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+    delete:
+      summary: Eliminar compatibilidad (admin)
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: OK }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /api/v1/import/productos:
     post:
-      summary: Importar productos (admin)
+      summary: Importar productos por archivo (admin)
       requestBody:
         required: true
         content:
           multipart/form-data:
             schema:
               type: object
+              required: [archivo]
               properties:
                 archivo:
                   type: string
                   format: binary
       responses:
         '201': { description: Importación completada }
-        '403': { description: Rol insuficiente }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
