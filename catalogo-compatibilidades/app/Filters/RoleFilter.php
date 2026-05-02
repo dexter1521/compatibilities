@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filters;
 
+use App\Services\Api\V1\JwtService;
 use CodeIgniter\Filters\FilterInterface;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -18,6 +19,16 @@ class RoleFilter implements FilterInterface
         }
 
         $user = $request->user ?? null;
+        if (!is_array($user)) {
+            $header = $request->getHeaderLine('Authorization');
+            if (preg_match('/^Bearer\s+(.+)$/i', $header, $m)) {
+                $user = (new JwtService())->decode($m[1]);
+                if (is_array($user)) {
+                    $request->user = $user;
+                }
+            }
+        }
+
         $role = is_array($user) ? (string) ($user['role'] ?? '') : '';
 
         if ($role === '' || !in_array($role, $allowedRoles, true)) {

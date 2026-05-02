@@ -24,10 +24,7 @@ final class ApiV1AuthFlowTest extends TestCase
 
     public function testLoginAndMeFlow(): void
     {
-        $login = $this->request('POST', '/api/v1/auth/login', [
-            'email' => 'admin@sharkmotors.local',
-            'password' => 'Admin123!',
-        ]);
+        $login = $this->loginWithRetry('admin@sharkmotors.local', 'Admin123!');
 
         $this->assertSame(200, $login['status']);
         $this->assertTrue((bool) ($login['json']['success'] ?? false));
@@ -78,10 +75,7 @@ final class ApiV1AuthFlowTest extends TestCase
 
     private function getAccessToken(): string
     {
-        $response = $this->request('POST', '/api/v1/auth/login', [
-            'email' => 'admin@sharkmotors.local',
-            'password' => 'Admin123!',
-        ]);
+        $response = $this->loginWithRetry('admin@sharkmotors.local', 'Admin123!');
 
         $this->assertSame(200, $response['status'], 'No se pudo autenticar para obtener token.');
 
@@ -89,6 +83,27 @@ final class ApiV1AuthFlowTest extends TestCase
         $this->assertNotSame('', $token, 'Login sin access_token.');
 
         return $token;
+    }
+
+    /**
+     * @return array{status:int,body:string,json:array<string,mixed>|null}
+     */
+    private function loginWithRetry(string $email, string $password): array
+    {
+        $response = $this->request('POST', '/api/v1/auth/login', [
+            'email' => $email,
+            'password' => $password,
+        ]);
+
+        if ($response['status'] === 429) {
+            sleep(65);
+            $response = $this->request('POST', '/api/v1/auth/login', [
+                'email' => $email,
+                'password' => $password,
+            ]);
+        }
+
+        return $response;
     }
 
     /**
