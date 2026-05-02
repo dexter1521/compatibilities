@@ -9,7 +9,7 @@ class RateLimitService
     public function allow(string $key, int $maxAttempts = 120, int $windowSeconds = 60): bool
     {
         $cache = cache();
-        $bucketKey = 'rl:' . $key;
+        $bucketKey = 'rl_' . hash('sha256', $key);
         $current = (int) ($cache->get($bucketKey) ?? 0);
 
         if ($current >= $maxAttempts) {
