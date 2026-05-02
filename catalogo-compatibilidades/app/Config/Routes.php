@@ -6,6 +6,8 @@ use CodeIgniter\Router\RouteCollection;
  * @var RouteCollection $routes
  */
 $routes->get('/', 'Home::index');
+$routes->get('/docs/api', 'ApiDocs::index');
+$routes->get('/docs/openapi.yaml', 'ApiDocs::spec');
 
 // Buscador
 $routes->get('/buscador',          'Search::index');
@@ -71,41 +73,41 @@ $routes->group('api/v1', static function ($routes) {
     // Productos
     $routes->get('productos', 'Api\V1\ProductosController::index');
     $routes->get('productos/(:num)', 'Api\V1\ProductosController::show/$1');
-    $routes->post('productos', 'Api\V1\ProductosController::create');
-    $routes->put('productos/(:num)', 'Api\V1\ProductosController::update/$1');
-    $routes->delete('productos/(:num)', 'Api\V1\ProductosController::delete/$1');
+    $routes->post('productos', 'Api\V1\ProductosController::create', ['filter' => 'role:admin']);
+    $routes->put('productos/(:num)', 'Api\V1\ProductosController::update/$1', ['filter' => 'role:admin']);
+    $routes->delete('productos/(:num)', 'Api\V1\ProductosController::delete/$1', ['filter' => 'role:admin']);
 
     // Busqueda
     $routes->get('search', 'Api\V1\SearchController::index');
-    $routes->get('search-missed', 'Api\V1\SearchController::missed');
+    $routes->get('search-missed', 'Api\V1\SearchController::missed', ['filter' => 'role:admin']);
 
     // Compatibilidades
     $routes->get('compatibilidades', 'Api\V1\CompatibilidadesController::index');
     $routes->get('compatibilidades/(:num)', 'Api\V1\CompatibilidadesController::show/$1');
-    $routes->post('compatibilidades', 'Api\V1\CompatibilidadesController::create');
-    $routes->put('compatibilidades/(:num)', 'Api\V1\CompatibilidadesController::update/$1');
-    $routes->delete('compatibilidades/(:num)', 'Api\V1\CompatibilidadesController::delete/$1');
-    $routes->patch('compatibilidades/(:num)/confirmar', 'Api\V1\SearchController::confirmarCompatibilidad/$1');
+    $routes->post('compatibilidades', 'Api\V1\CompatibilidadesController::create', ['filter' => 'role:admin']);
+    $routes->put('compatibilidades/(:num)', 'Api\V1\CompatibilidadesController::update/$1', ['filter' => 'role:admin']);
+    $routes->delete('compatibilidades/(:num)', 'Api\V1\CompatibilidadesController::delete/$1', ['filter' => 'role:admin']);
+    $routes->patch('compatibilidades/(:num)/confirmar', 'Api\V1\SearchController::confirmarCompatibilidad/$1', ['filter' => 'role:admin,vendedor']);
 
     // Motocicletas
     $routes->get('motocicletas', 'Api\V1\MotocicletasController::index');
     $routes->get('motocicletas/(:num)', 'Api\V1\MotocicletasController::show/$1');
-    $routes->post('motocicletas', 'Api\V1\MotocicletasController::create');
-    $routes->put('motocicletas/(:num)', 'Api\V1\MotocicletasController::update/$1');
-    $routes->delete('motocicletas/(:num)', 'Api\V1\MotocicletasController::delete/$1');
+    $routes->post('motocicletas', 'Api\V1\MotocicletasController::create', ['filter' => 'role:admin']);
+    $routes->put('motocicletas/(:num)', 'Api\V1\MotocicletasController::update/$1', ['filter' => 'role:admin']);
+    $routes->delete('motocicletas/(:num)', 'Api\V1\MotocicletasController::delete/$1', ['filter' => 'role:admin']);
 
     // Piezas
     $routes->get('piezas', 'Api\V1\PiezasController::index');
     $routes->get('piezas/(:num)', 'Api\V1\PiezasController::show/$1');
-    $routes->post('piezas', 'Api\V1\PiezasController::create');
-    $routes->put('piezas/(:num)', 'Api\V1\PiezasController::update/$1');
-    $routes->delete('piezas/(:num)', 'Api\V1\PiezasController::delete/$1');
+    $routes->post('piezas', 'Api\V1\PiezasController::create', ['filter' => 'role:admin']);
+    $routes->put('piezas/(:num)', 'Api\V1\PiezasController::update/$1', ['filter' => 'role:admin']);
+    $routes->delete('piezas/(:num)', 'Api\V1\PiezasController::delete/$1', ['filter' => 'role:admin']);
 
     // Aliases
     $routes->get('aliases', 'Api\V1\AliasesController::index');
-    $routes->post('aliases', 'Api\V1\AliasesController::create');
-    $routes->delete('aliases/(:num)', 'Api\V1\AliasesController::delete/$1');
+    $routes->post('aliases', 'Api\V1\AliasesController::create', ['filter' => 'role:admin']);
+    $routes->delete('aliases/(:num)', 'Api\V1\AliasesController::delete/$1', ['filter' => 'role:admin']);
 
     // Importador
-    $routes->post('import/productos', 'Api\V1\ImportController::productos');
+    $routes->post('import/productos', 'Api\V1\ImportController::productos', ['filter' => 'role:admin']);
 });

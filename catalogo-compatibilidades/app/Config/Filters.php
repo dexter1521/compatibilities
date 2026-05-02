@@ -11,6 +11,7 @@ use CodeIgniter\Filters\SecureHeaders;
 use App\Filters\JwtAuthFilter;
 use App\Filters\ApiRateLimitFilter;
 use App\Filters\ApiAuditLogFilter;
+use App\Filters\RoleFilter;
 
 class Filters extends BaseConfig
 {
@@ -30,6 +31,7 @@ class Filters extends BaseConfig
         'jwt-auth'      => JwtAuthFilter::class,
         'api-rate-limit'=> ApiRateLimitFilter::class,
         'api-audit-log' => ApiAuditLogFilter::class,
+        'role'          => RoleFilter::class,
     ];
 
     /**
