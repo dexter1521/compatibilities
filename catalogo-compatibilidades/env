@@ -141,3 +141,12 @@
 #--------------------------------------------------------------------
 
 # curlrequest.shareOptions = false
+
+#--------------------------------------------------------------------
+# API AUTH (JWT / Admin bootstrap)
+#--------------------------------------------------------------------
+
+# JWT_SECRET = change-this-secret-in-env
+# ADMIN_EMAIL = admin@sharkmotors.local
+# ADMIN_PASSWORD = Admin123!
+# ADMIN_NAME = Administrador API

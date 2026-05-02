@@ -12,7 +12,12 @@ class JwtService
 
     public function __construct()
     {
-        $this->secret = getenv('JWT_SECRET') ?: 'change-this-secret-in-env';
+        $this->secret = (string) (getenv('JWT_SECRET') ?: 'change-this-secret-in-env');
+
+        $env = (string) (getenv('CI_ENVIRONMENT') ?: 'production');
+        if ($env === 'production' && ($this->secret === '' || $this->secret === 'change-this-secret-in-env')) {
+            throw new \RuntimeException('JWT_SECRET no configurado para entorno de producción.');
+        }
     }
 
     public function issueAccessToken(array $claims): string

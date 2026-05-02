@@ -252,3 +252,9 @@ Pendiente para cerrar PDR completo:
 - política fina por rol en endpoints sensibles (RBAC detallado),
 - OpenAPI/Swagger completo,
 - pruebas de integración API + hardening seguridad (rotación de secretos y revocación de access token por blacklist si se requiere).
+
+## 8) RBAC (v1)
+
+La matriz detallada de permisos por endpoint está en:
+
+- `docs/RBAC_MATRIX_V1.md`
