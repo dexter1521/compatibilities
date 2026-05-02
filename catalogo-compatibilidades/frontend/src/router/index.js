@@ -5,7 +5,7 @@ import DashboardView from '../views/DashboardView.vue'
 import SearchView from '../views/SearchView.vue'
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory('/app/'),
   routes: [
     { path: '/login', name: 'login', component: LoginView, meta: { guest: true } },
     {

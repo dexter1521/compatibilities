@@ -6,6 +6,8 @@ use CodeIgniter\Router\RouteCollection;
  * @var RouteCollection $routes
  */
 $routes->get('/', 'Home::index');
+$routes->get('/app', 'Spa::index');
+$routes->get('/app/(:any)', 'Spa::index');
 $routes->get('/docs/api', 'ApiDocs::index');
 $routes->get('/docs/openapi.yaml', 'ApiDocs::spec');
 

@@ -73,7 +73,7 @@ api.interceptors.response.use(
         localStorage.removeItem('sm_access_token')
         localStorage.removeItem('sm_refresh_token')
         localStorage.removeItem('sm_user')
-        window.location.href = '/login'
+        window.location.href = '/app/login'
         return Promise.reject(refreshError)
       } finally {
         isRefreshing = false
