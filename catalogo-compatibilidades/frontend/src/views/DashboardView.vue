@@ -12,6 +12,7 @@
         <RouterLink to="/motocicletas">Motocicletas</RouterLink>
         <RouterLink to="/piezas">Piezas</RouterLink>
         <RouterLink to="/compatibilidades">Compatibilidades</RouterLink>
+        <RouterLink to="/aliases">Aliases</RouterLink>
         <RouterLink to="/import">Importador</RouterLink>
       </nav>
     </aside>

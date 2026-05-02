@@ -60,7 +60,7 @@ Se consolidó la API v1 con contratos estables y pruebas de integración, y se i
    - motocicletas
    - piezas
    - compatibilidades
-   - importador
+   - importador`r`n    - aliases
 2. Integrar menú SPA completo por rol.
 3. Reducir/retirar Debug Toolbar en `/app` para entorno de desarrollo SPA limpio.
 4. Cerrar documentación de despliegue frontend (build/release/versionado de assets).
@@ -74,3 +74,4 @@ Esta fase se considera cerrada cuando:
 - todos los módulos operativos estén en SPA,
 - legacy quede en modo mantenimiento,
 - y se ejecute smoke test integral sobre `/app` con API v1.
+

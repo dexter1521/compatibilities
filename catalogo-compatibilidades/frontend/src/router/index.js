@@ -8,6 +8,7 @@ import MotocicletasView from '../views/MotocicletasView.vue'
 import PiezasView from '../views/PiezasView.vue'
 import CompatibilidadesView from '../views/CompatibilidadesView.vue'
 import ImportView from '../views/ImportView.vue'
+import AliasesView from '../views/AliasesView.vue'
 
 const router = createRouter({
   history: createWebHistory('/app/'),
@@ -24,6 +25,7 @@ const router = createRouter({
         { path: 'motocicletas', name: 'motocicletas', component: MotocicletasView },
         { path: 'piezas', name: 'piezas', component: PiezasView },
         { path: 'compatibilidades', name: 'compatibilidades', component: CompatibilidadesView },
+        { path: 'aliases', name: 'aliases', component: AliasesView },
         { path: 'import', name: 'import', component: ImportView }
       ]
     }
