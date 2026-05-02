@@ -19,9 +19,11 @@ class ApiRateLimitFilter implements FilterInterface
         }
 
         $ip = $request->getIPAddress() ?: 'unknown';
-        $key = $ip . ':' . $path;
+        $method = strtoupper($request->getMethod());
+        $limit = $this->resolveLimit($path, $method);
+        $key = implode('|', [$ip, $method, $path]);
 
-        $allowed = (new RateLimitService())->allow($key, 120, 60);
+        $allowed = (new RateLimitService())->allow($key, $limit['maxAttempts'], $limit['windowSeconds']);
         if (!$allowed) {
             return service('response')->setStatusCode(429)->setJSON([
                 'status' => 429,
@@ -33,6 +35,22 @@ class ApiRateLimitFilter implements FilterInterface
         }
 
         return null;
+    }
+
+    /**
+     * @return array{maxAttempts:int,windowSeconds:int}
+     */
+    private function resolveLimit(string $path, string $method): array
+    {
+        if (strpos($path, '/api/v1/auth/') === 0) {
+            return ['maxAttempts' => 12, 'windowSeconds' => 60];
+        }
+
+        if ($method === 'GET') {
+            return ['maxAttempts' => 240, 'windowSeconds' => 60];
+        }
+
+        return ['maxAttempts' => 90, 'windowSeconds' => 60];
     }
 
     public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)
