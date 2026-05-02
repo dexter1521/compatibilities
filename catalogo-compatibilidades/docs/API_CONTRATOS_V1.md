@@ -238,12 +238,17 @@ Reglas obligatorias para mantener `v1` estable:
 ## 7) Estado actual de cobertura v1
 
 Cubierto:
+- `auth` (`login`, `refresh`, `me`, `logout`)
 - `productos` CRUD
+- `motocicletas` CRUD
+- `piezas` CRUD
+- `aliases` (listado, alta, baja)
+- `compatibilidades` CRUD + confirmar
 - `search`
 - `search-missed`
-- `compatibilidades/{id}/confirmar`
 - `import/productos`
 
 Pendiente para cerrar PDR completo:
-- `motocicletas`, `piezas`, `aliases`, `compatibilidades` CRUD completo,
-- auth JWT + roles + rate-limit + auditoría.
+- política fina por rol en endpoints sensibles (RBAC detallado),
+- OpenAPI/Swagger completo,
+- pruebas de integración API + hardening seguridad (rotación de secretos y revocación de access token por blacklist si se requiere).
