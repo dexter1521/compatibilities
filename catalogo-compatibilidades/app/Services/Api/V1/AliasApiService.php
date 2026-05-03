@@ -30,6 +30,17 @@ class AliasApiService
         return (int) $this->model->getInsertID();
     }
 
+    public function find(int $id): ?array
+    {
+        $row = $this->model->find($id);
+        return $row ?: null;
+    }
+
+    public function update(int $id, array $data): bool
+    {
+        return $this->model->update($id, $data);
+    }
+
     public function existsByAlias(string $alias, ?int $excludeId = null): bool
     {
         $q = $this->model->where('UPPER(alias)', mb_strtoupper(trim($alias)));
@@ -44,7 +55,7 @@ class AliasApiService
         return $this->model->delete($id);
     }
 
-    public function makeSlug(string $alias): string
+    public function makeSlug(string $alias, ?int $excludeId = null): string
     {
         helper('url');
 
@@ -52,10 +63,15 @@ class AliasApiService
         $slug = $base;
         $i = 1;
 
-        while ($this->model->where('slug', $slug)->first() !== null) {
+        while (true) {
+            $q = $this->model->where('slug', $slug);
+            if ($excludeId !== null) {
+                $q->where('id !=', $excludeId);
+            }
+            if ($q->first() === null) {
+                return $slug;
+            }
             $slug = $base . '-' . $i++;
         }
-
-        return $slug;
     }
 }

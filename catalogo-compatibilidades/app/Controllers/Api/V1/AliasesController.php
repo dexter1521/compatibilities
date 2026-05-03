@@ -49,6 +49,38 @@ class AliasesController extends BaseApiController
         return $this->respondSuccess(['items' => $this->service->list()], 'Alias creado correctamente.', ResponseInterface::HTTP_CREATED);
     }
 
+    public function update(int $id): ResponseInterface
+    {
+        $actual = $this->service->find($id);
+        if (!$actual) {
+            return $this->respondError('Alias no encontrado.', null, ResponseInterface::HTTP_NOT_FOUND);
+        }
+
+        $payload = $this->request->getJSON(true) ?: $this->request->getRawInput();
+
+        if (!$this->validateData($payload, [
+            'motocicleta_id' => 'required|is_natural_no_zero',
+            'alias' => 'required|max_length[180]',
+        ])) {
+            return $this->respondValidationErrors($this->validator->getErrors());
+        }
+
+        $alias = trim((string) $payload['alias']);
+        if ($this->service->existsByAlias($alias, $id)) {
+            return $this->respondError('Alias ya registrado.', [
+                'alias' => ['duplicado'],
+            ], ResponseInterface::HTTP_CONFLICT);
+        }
+
+        $this->service->update($id, [
+            'motocicleta_id' => (int) $payload['motocicleta_id'],
+            'alias' => $alias,
+            'slug' => $this->service->makeSlug($alias, $id),
+        ]);
+
+        return $this->respondSuccess($this->service->find($id), 'Alias actualizado correctamente.');
+    }
+
     public function delete(int $id): ResponseInterface
     {
         $this->service->delete($id);

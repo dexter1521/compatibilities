@@ -55,15 +55,9 @@ Se consolidÃ³ la API v1 con contratos estables y pruebas de integraciÃ³n, y se i
 - Se priorizÃ³ una SPA interna (no SSR) por contexto operativo de mostrador y panel interno.
 
 ## Pendientes Inmediatos
-1. Migrar mÃ³dulos SPA restantes:
-   - productos
-   - motocicletas
-   - piezas
-   - compatibilidades
-   - importador`r`n    - aliases
-2. Integrar menÃº SPA completo por rol.
-3. Reducir/retirar Debug Toolbar en `/app` para entorno de desarrollo SPA limpio.
-4. Cerrar documentaciÃ³n de despliegue frontend (build/release/versionado de assets).
+- Cierre de migración SPA completado para módulos funcionales principales.
+- Mantener documentación de despliegue frontend y procedimiento de release versionado de `public/spa`.
+- Consolidar menú de roles (fase de ajuste menor para permisos.)
 
 ## Riesgos Abiertos
 - Convivencia temporal legacy + SPA puede duplicar flujos hasta completar migraciÃ³n.
@@ -80,3 +74,9 @@ Esta fase se considera cerrada cuando:
 
 - 2026-05-03: Extendida la migración SPA con edición inline en módulos de `motocicletas` y `compatibilidades` (`PUT /api/v1/motocicletas/{id}` y `PUT /api/v1/compatibilidades/{id}`).
 - 2026-05-03: Se completó edición inline en SPA para `piezas` y `aliases` (PUT `/api/v1/piezas/{id}`, PUT `/api/v1/aliases/{id}`), con acciones Editar/Guardar/Cancelar.
+
+- 2026-05-03: Migración SPA de módulos CRUD finalizada (productos, motocicletas, piezas, compatibilidades, aliases) con edición inline y flujo completo de alta/editar/baja (create, PUT, delete) para uso operativo interno.
+
+
+
+- 2026-05-03: Se agrego el endpoint PUT /api/v1/aliases/{id} en API v1 para alinear con el cliente SPA (ruta, controller y servicio) y se actualizo openapi.yaml.

@@ -107,6 +107,7 @@ $routes->group('api/v1', static function ($routes) {
 
     // Aliases
     $routes->get('aliases', 'Api\V1\AliasesController::index');
+    $routes->put('aliases/(:num)', 'Api\V1\AliasesController::update/$1', ['filter' => 'role:admin']);
     $routes->post('aliases', 'Api\V1\AliasesController::create', ['filter' => 'role:admin']);
     $routes->delete('aliases/(:num)', 'Api\V1\AliasesController::delete/$1', ['filter' => 'role:admin']);
 

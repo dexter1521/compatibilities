@@ -487,6 +487,18 @@ paths:
         '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /api/v1/aliases/{id}:
+    put:
+      summary: Actualizar alias (admin)
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: OK }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: Alias duplicado }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
     delete:
       summary: Eliminar alias (admin)
       parameters:
