@@ -85,6 +85,21 @@
       }
     },
     {
+      "name": "Aliases/Put",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{access_token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": "{{base_url}}/api/v1/aliases/1",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"motocicleta_id\": 1,\n  \"alias\": \"FT 150\"\n}"
+        }
+      }
+    },
+    {
       "name": "Compatibilidades/List",
       "request": {
         "method": "GET",

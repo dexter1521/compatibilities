@@ -82,3 +82,4 @@ Esta fase se considera cerrada cuando:
 - 2026-05-03: Se agrego el endpoint PUT /api/v1/aliases/{id} en API v1 para alinear con el cliente SPA (ruta, controller y servicio) y se actualizo openapi.yaml.
 
 - 2026-05-03: Fase de migracion SPA de operacion interna marcada como CERRADA. Criterios: modulos migrados a SPA con alta/edicion/baja por API, contrato v1 estable para alias PUT, y cobertura documental abierta para pruebas de smoke/test de /app.
+- 2026-05-03: Se formalizo checklist de smoke test completo para /app (API+UI) en docs/SMOKE_TEST_CHECKLIST.md, incluyendo navegacion por mÃ³dulos y escenarios desktop/mobile.

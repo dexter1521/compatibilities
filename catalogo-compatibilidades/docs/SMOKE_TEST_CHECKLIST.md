@@ -39,3 +39,29 @@
 ## 7) Criterio de salida
 - Todas las pruebas anteriores en verde sin errores 500.
 - Contratos JSON (`status/success/data/message/errors`) consistentes.
+## 8) SPA /app (end to end basico)
+Estas pruebas se hacen con navegador y sesion activa.
+
+1. Acceder a `http://localhost:8080/app`.
+2. Login con usuario admin (debe redirigir al dashboard).
+3. Validar navegacion visible en:
+   - Buscador
+   - Productos
+   - Motos
+   - Piezas
+   - Compatibilidades
+   - Aliases
+   - Import
+4. En cada modulo, validar:
+   - Listado carga sin error 500.
+   - El operador puede crear un registro.
+   - El operador puede editar un registro en la fila (editar/guardar/cancelar).
+   - El operador puede eliminar un registro.
+   - En productos, validar filtros basicos y paginacion.
+5. Verificar sidebar en ancho de tablet y mobile:
+   - Boton menu visible en mobile.
+   - Tabla con scroll horizontal.
+   - Botones accion no se montan sobre celdas.
+6. En consola del navegador:
+   - No errores JS.
+   - No request 4xx/5xx fuera de casos esperados.

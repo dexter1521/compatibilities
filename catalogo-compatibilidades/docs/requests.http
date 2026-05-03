@@ -61,3 +61,13 @@ Content-Type: application/json
 {
   "refresh_token": "{{refreshToken}}"
 }
+
+### Aliases Update
+PUT {{baseUrl}}/api/v1/aliases/1
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "motocicleta_id": 1,
+  "alias": "FT 150"
+}
