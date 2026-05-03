@@ -137,7 +137,36 @@ a { color: inherit; text-decoration: none; }
   margin-bottom: 12px;
 }
 
+.filters-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  gap: 10px;
+  margin: 10px 0 12px;
+}
+
+.list-toolbar {
+  margin: 8px 0 6px;
+  display: grid;
+  gap: 8px;
+}
+
+.list-pager {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.list-pager button {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  padding: 8px 12px;
+}
+
 .inline-form input,
+.filters-form input,
+.filters-form select,
 .upload-form input {
   height: 40px;
   border: 1px solid #e5e7eb;
@@ -146,6 +175,7 @@ a { color: inherit; text-decoration: none; }
 }
 
 .inline-form button,
+.filters-form button,
 .upload-form button {
   height: 40px;
   border: none;
@@ -153,6 +183,12 @@ a { color: inherit; text-decoration: none; }
   background: #e1000a;
   color: #fff;
   font-weight: 700;
+}
+
+.filters-form button.ghost {
+  background: #fff;
+  color: #374151;
+  border: 1px solid #d1d5db;
 }
 
 .table-wrap {
@@ -184,12 +220,25 @@ th {
   gap: 8px;
 }
 
+.inline-cell {
+  width: 100%;
+  min-width: 140px;
+  height: 36px;
+}
+
 button.danger {
   background: #b00020;
   color: #fff;
   border: none;
   border-radius: 8px;
   padding: 7px 10px;
+}
+
+button.ghost {
+  background: #fff;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
 }
 
 @media (max-width: 900px) {
@@ -204,6 +253,7 @@ button.danger {
   }
   .sidebar.open { left: 0; }
   .inline-form,
+  .filters-form,
   .upload-form {
     grid-template-columns: 1fr;
   }

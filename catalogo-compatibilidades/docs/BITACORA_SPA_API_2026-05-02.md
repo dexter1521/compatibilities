@@ -75,3 +75,6 @@ Esta fase se considera cerrada cuando:
 - legacy quede en modo mantenimiento,
 - y se ejecute smoke test integral sobre `/app` con API v1.
 
+
+- 2026-05-03: Se agregó edición inline en módulo SPA de Productos (PUT `/api/v1/productos/{id}`), con edición rápida de clave, nombre y estado, y flujo Guardar/Cancelar.
+
