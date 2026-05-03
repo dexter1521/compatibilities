@@ -27,11 +27,28 @@
         <tbody>
           <tr v-for="row in rows" :key="row.id">
             <td>{{ row.id }}</td>
-            <td>{{ row.alias }}</td>
+            <td>
+              <template v-if="editingId !== row.id">{{ row.alias }}</template>
+              <input v-else v-model="editForm.alias" class="inline-cell" placeholder="Alias" />
+            </td>
             <td>{{ row.slug }}</td>
-            <td>{{ row.marca_nombre ? row.marca_nombre + ' - ' : '' }}{{ row.moto_modelo || row.motocicleta_id }}</td>
+            <td>
+              <template v-if="editingId !== row.id">{{ row.marca_nombre ? row.marca_nombre + ' - ' : '' }}{{ row.moto_modelo || row.motocicleta_id }}</template>
+              <input v-else v-model.number="editForm.motocicleta_id" type="number" min="1" class="inline-cell" />
+            </td>
             <td v-if="isAdmin">
-              <button class="danger" @click="remove(row.id)">Eliminar</button>
+              <div class="actions">
+                <template v-if="editingId !== row.id">
+                  <button @click="startEdit(row)">Editar</button>
+                  <button class="danger" @click="remove(row.id)">Eliminar</button>
+                </template>
+                <template v-else>
+                  <button :disabled="saving && savingId === row.id" @click="saveEdit(row)">
+                    {{ saving && savingId === row.id ? 'Guardando...' : 'Guardar' }}
+                  </button>
+                  <button class="ghost" type="button" @click="cancelEdit">Cancelar</button>
+                </template>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -53,6 +70,9 @@ const saving = ref(false)
 const error = ref('')
 const rows = ref([])
 const form = ref({ motocicleta_id: '', alias: '' })
+const editingId = ref(null)
+const savingId = ref(null)
+const editForm = ref({ motocicleta_id: '', alias: '' })
 
 const load = async () => {
   loading.value = true
@@ -91,6 +111,35 @@ const remove = async (id) => {
     await load()
   } catch (e) {
     error.value = e?.response?.data?.message || 'No se pudo eliminar el alias.'
+  }
+}
+
+const startEdit = (row) => {
+  editingId.value = row.id
+  editForm.value = {
+    motocicleta_id: String(row.motocicleta_id || ''),
+    alias: row.alias || ''
+  }
+}
+
+const cancelEdit = () => {
+  editingId.value = null
+}
+
+const saveEdit = async (row) => {
+  savingId.value = row.id
+  error.value = ''
+  try {
+    await api.put(`/aliases/${row.id}`, {
+      motocicleta_id: Number(editForm.value.motocicleta_id || row.motocicleta_id || 0),
+      alias: editForm.value.alias
+    })
+    editingId.value = null
+    await load()
+  } catch (e) {
+    error.value = e?.response?.data?.message || 'No se pudo actualizar el alias.'
+  } finally {
+    savingId.value = null
   }
 }
 

@@ -25,9 +25,25 @@
         <tbody>
           <tr v-for="row in rows" :key="row.id">
             <td>{{ row.id }}</td>
-            <td>{{ row.nombre }}</td>
+            <td>
+              <template v-if="editingId !== row.id">{{ row.nombre }}</template>
+              <input v-else v-model="editForm.nombre" class="inline-cell" placeholder="Nombre de pieza" />
+            </td>
             <td>{{ row.slug }}</td>
-            <td v-if="isAdmin"><button class="danger" @click="remove(row.id)">Eliminar</button></td>
+            <td v-if="isAdmin">
+              <div class="actions">
+                <template v-if="editingId !== row.id">
+                  <button @click="startEdit(row)">Editar</button>
+                  <button class="danger" @click="remove(row.id)">Eliminar</button>
+                </template>
+                <template v-else>
+                  <button :disabled="saving && savingId === row.id" @click="saveEdit(row)">
+                    {{ saving && savingId === row.id ? 'Guardando...' : 'Guardar' }}
+                  </button>
+                  <button class="ghost" type="button" @click="cancelEdit">Cancelar</button>
+                </template>
+              </div>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -48,6 +64,9 @@ const saving = ref(false)
 const error = ref('')
 const rows = ref([])
 const nombre = ref('')
+const editingId = ref(null)
+const savingId = ref(null)
+const editForm = ref({ nombre: '' })
 
 const load = async () => {
   loading.value = true
@@ -83,6 +102,31 @@ const remove = async (id) => {
     await load()
   } catch (e) {
     error.value = e?.response?.data?.message || 'No se pudo eliminar pieza.'
+  }
+}
+
+const startEdit = (row) => {
+  editingId.value = row.id
+  editForm.value = { nombre: row.nombre || '' }
+}
+
+const cancelEdit = () => {
+  editingId.value = null
+}
+
+const saveEdit = async (row) => {
+  savingId.value = row.id
+  error.value = ''
+  try {
+    await api.put(`/piezas/${row.id}`, {
+      nombre: editForm.value.nombre
+    })
+    editingId.value = null
+    await load()
+  } catch (e) {
+    error.value = e?.response?.data?.message || 'No se pudo actualizar la pieza.'
+  } finally {
+    savingId.value = null
   }
 }
 
