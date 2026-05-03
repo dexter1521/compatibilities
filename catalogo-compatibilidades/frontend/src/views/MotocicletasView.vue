@@ -27,11 +27,32 @@
         <tbody>
           <tr v-for="row in rows" :key="row.id">
             <td>{{ row.id }}</td>
-            <td>{{ row.marca_id }}</td>
-            <td>{{ row.modelo }}</td>
-            <td>{{ row.anio_desde || '-' }} - {{ row.anio_hasta || '-' }}</td>
+            <td>
+              <template v-if="editingId !== row.id">{{ row.marca_id }}</template>
+              <input v-else v-model.number="editForm.marca_id" type="number" min="1" class="inline-cell" />
+            </td>
+            <td>
+              <template v-if="editingId !== row.id">{{ row.modelo }}</template>
+              <input v-else v-model="editForm.modelo" class="inline-cell" placeholder="Modelo" />
+            </td>
+            <td>
+              <template v-if="editingId !== row.id">{{ row.anio_desde || '-' }} - {{ row.anio_hasta || '-' }}</template>
+              <div v-else class="actions">
+                <input v-model.number="editForm.anio_desde" type="number" min="1900" max="2100" class="inline-cell" placeholder="Año desde" />
+                <input v-model.number="editForm.anio_hasta" type="number" min="1900" max="2100" class="inline-cell" placeholder="Año hasta" />
+              </div>
+            </td>
             <td v-if="isAdmin">
-              <button class="danger" @click="remove(row.id)">Eliminar</button>
+              <div class="actions" v-if="editingId !== row.id">
+                <button @click="startEdit(row)">Editar</button>
+                <button class="danger" @click="remove(row.id)">Eliminar</button>
+              </div>
+              <div class="actions" v-else>
+                <button :disabled="saving && savingId === row.id" @click="saveEdit(row)">
+                  {{ saving && savingId === row.id ? 'Guardando...' : 'Guardar' }}
+                </button>
+                <button class="ghost" type="button" @click="cancelEdit">Cancelar</button>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -52,6 +73,15 @@ const loading = ref(false)
 const saving = ref(false)
 const error = ref('')
 const rows = ref([])
+const editingId = ref(null)
+const savingId = ref(null)
+const editForm = ref({
+  marca_id: '',
+  modelo: '',
+  anio_desde: '',
+  anio_hasta: '',
+  cilindrada: ''
+})
 
 const form = ref({ marca_id: '', modelo: '' })
 
@@ -82,6 +112,41 @@ const createMoto = async () => {
     error.value = e?.response?.data?.message || 'No se pudo crear motocicleta.'
   } finally {
     saving.value = false
+  }
+}
+
+const startEdit = (row) => {
+  editingId.value = row.id
+  editForm.value = {
+    marca_id: String(row.marca_id || ''),
+    modelo: row.modelo || '',
+    anio_desde: row.anio_desde || '',
+    anio_hasta: row.anio_hasta || '',
+    cilindrada: row.cilindrada || ''
+  }
+}
+
+const cancelEdit = () => {
+  editingId.value = null
+}
+
+const saveEdit = async (row) => {
+  savingId.value = row.id
+  error.value = ''
+  try {
+    await api.put(`/motocicletas/${row.id}`, {
+      marca_id: Number(editForm.value.marca_id || row.marca_id || 0),
+      modelo: editForm.value.modelo,
+      anio_desde: editForm.value.anio_desde === '' ? null : Number(editForm.value.anio_desde),
+      anio_hasta: editForm.value.anio_hasta === '' ? null : Number(editForm.value.anio_hasta),
+      cilindrada: editForm.value.cilindrada || null
+    })
+    editingId.value = null
+    await load()
+  } catch (e) {
+    error.value = e?.response?.data?.message || 'No se pudo actualizar motocicleta.'
+  } finally {
+    savingId.value = null
   }
 }
 

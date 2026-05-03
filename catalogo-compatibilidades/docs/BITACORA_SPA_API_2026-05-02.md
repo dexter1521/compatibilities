@@ -78,3 +78,4 @@ Esta fase se considera cerrada cuando:
 
 - 2026-05-03: Se agregó edición inline en módulo SPA de Productos (PUT `/api/v1/productos/{id}`), con edición rápida de clave, nombre y estado, y flujo Guardar/Cancelar.
 
+- 2026-05-03: Extendida la migración SPA con edición inline en módulos de `motocicletas` y `compatibilidades` (`PUT /api/v1/motocicletas/{id}` y `PUT /api/v1/compatibilidades/{id}`).
