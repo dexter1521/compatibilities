@@ -16,7 +16,7 @@ class ImportController extends BaseApiController
 
         if (!$file || !$file->isValid() || $file->hasMoved()) {
             return $this->respondValidationErrors([
-                'archivo' => ['No se recibió un archivo válido.'],
+                'archivo' => ['No se recibiÃ³ un archivo vÃ¡lido.'],
             ]);
         }
 
@@ -41,11 +41,24 @@ class ImportController extends BaseApiController
         }
 
         if (!$result['ok']) {
-            return $this->respondError($result['error'] ?: 'La importación falló.', null, ResponseInterface::HTTP_UNPROCESSABLE_ENTITY);
+            return $this->respondError($result['error'] ?: 'La importaciÃ³n fallÃ³.', null, ResponseInterface::HTTP_UNPROCESSABLE_ENTITY);
         }
+
+        $status = ResponseInterface::HTTP_CREATED;
+        if (($result['errores'] ?? 0) > 0 && ($result['procesados'] ?? 0) > 0) {
+            $status = ResponseInterface::HTTP_OK;
+        }
+
+        $message = $status === ResponseInterface::HTTP_OK
+            ? 'ImportaciÃ³n finalizada con advertencias.'
+            : 'ImportaciÃ³n completada.';
 
         return $this->respondSuccess([
             'job_id' => $result['job_id'],
-        ], 'Importación completada.', ResponseInterface::HTTP_CREATED);
+            'estado' => $result['estado'] ?? 'finalizado',
+            'total_items' => (int) ($result['total_items'] ?? 0),
+            'procesados' => (int) ($result['procesados'] ?? 0),
+            'errores' => (int) ($result['errores'] ?? 0),
+        ], $message, $status);
     }
 }

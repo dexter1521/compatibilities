@@ -20,12 +20,18 @@ class SearchApiService
         $this->timezone = config('App')->appTimezone ?: 'UTC';
     }
 
-    public function search(string $term, int $limit = 50): array
+    public function search(string $term, int $limit = 50, int $page = 1): array
     {
-        $items = $this->searchModel->searchByTerm($term);
-        $items = array_slice($items, 0, max(1, min($limit, 50)));
+        $page = max(1, $page);
+        $limit = max(1, min($limit, 50));
 
-        return array_map(function (array $item): array {
+        $allItems = $this->searchModel->searchByTerm($term);
+        $total = count($allItems);
+        $offset = ($page - 1) * $limit;
+
+        $items = array_slice($allItems, $offset, $limit);
+
+        $items = array_map(function (array $item): array {
             $item['compatibilidades'] = array_map(function (array $compat): array {
                 $compat['score_relevancia'] = (int) ($compat['contador_confirmaciones'] ?? 0);
                 return $compat;
@@ -33,6 +39,22 @@ class SearchApiService
 
             return $item;
         }, $items);
+
+        return [
+            'items' => $items,
+            'meta' => [
+                'page' => $page,
+                'per_page' => $limit,
+                'total' => $total,
+                'last_page' => (int) ceil($total / $limit),
+                'sort_by' => 'relevancia',
+                'sort_dir' => 'desc',
+                'filters' => [
+                    'q' => $term !== '' ? $term : null,
+                ],
+                'timezone' => $this->timezone,
+            ],
+        ];
     }
 
     public function confirmCompatibilidad(int $id): ?array

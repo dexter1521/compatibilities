@@ -7,6 +7,7 @@ import ProductosView from '../views/ProductosView.vue'
 import MotocicletasView from '../views/MotocicletasView.vue'
 import PiezasView from '../views/PiezasView.vue'
 import CompatibilidadesView from '../views/CompatibilidadesView.vue'
+import MarcasView from '../views/MarcasView.vue'
 import ImportView from '../views/ImportView.vue'
 import AliasesView from '../views/AliasesView.vue'
 
@@ -23,6 +24,7 @@ const router = createRouter({
         { path: 'buscador', name: 'buscador', component: SearchView },
         { path: 'productos', name: 'productos', component: ProductosView },
         { path: 'motocicletas', name: 'motocicletas', component: MotocicletasView },
+        { path: 'marcas', name: 'marcas', component: MarcasView },
         { path: 'piezas', name: 'piezas', component: PiezasView },
         { path: 'compatibilidades', name: 'compatibilidades', component: CompatibilidadesView },
         { path: 'aliases', name: 'aliases', component: AliasesView },

@@ -87,10 +87,91 @@ components:
     SearchMeta:
       type: object
       properties:
-        q: { type: string, example: ft150 balata }
-        limit: { type: integer, example: 20 }
+        page: { type: integer, example: 1 }
+        per_page: { type: integer, example: 20 }
         total: { type: integer, example: 3 }
+        last_page: { type: integer, example: 2 }
+        sort_by: { type: string, example: relevancia }
+        sort_dir: { type: string, example: desc }
+        filters:
+          type: object
+          properties:
+            q: { type: string, example: ft150 balata }
         timezone: { type: string, example: UTC }
+    SearchMissedItem:
+      type: object
+      properties:
+        id: { type: integer, example: 15 }
+        termino: { type: string, example: "kit de arranque" }
+        termino_normalizado: { type: string, example: "kit de arranque" }
+        contador: { type: integer, example: 8 }
+        ultima_busqueda_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time, nullable: true }
+        updated_at: { type: string, format: date-time, nullable: true }
+    Marca:
+      type: object
+      properties:
+        id: { type: integer, example: 1 }
+        nombre: { type: string, example: Kawasaki }
+        slug: { type: string, example: kawasaki }
+        activo: { type: integer, example: 1 }
+        created_at: { type: string, format: date-time, nullable: true }
+        updated_at: { type: string, format: date-time, nullable: true }
+    Moto:
+      type: object
+      properties:
+        id: { type: integer, example: 1 }
+        modelo: { type: string, example: Ninja 250 }
+        anio_desde: { type: integer, nullable: true, example: 2018 }
+        anio_hasta: { type: integer, nullable: true, example: 2022 }
+        cilindrada: { type: string, nullable: true, example: 250 }
+        marca_id: { type: integer, example: 1 }
+        marca_nombre: { type: string, example: Kawasaki }
+        created_at: { type: string, format: date-time, nullable: true }
+        updated_at: { type: string, format: date-time, nullable: true }
+    Pieza:
+      type: object
+      properties:
+        id: { type: integer, example: 3 }
+        nombre: { type: string, example: Filtro de aceite }
+        slug: { type: string, example: filtro-de-aceite }
+        created_at: { type: string, format: date-time, nullable: true }
+        updated_at: { type: string, format: date-time, nullable: true }
+    Alias:
+      type: object
+      properties:
+        id: { type: integer, example: 8 }
+        motocicleta_id: { type: integer, example: 12 }
+        alias: { type: string, example: FZ150 }
+        moto_modelo: { type: string, example: Ninja 150 }
+        marca_nombre: { type: string, example: Yamaha }
+        slug: { type: string, example: fz150 }
+        created_at: { type: string, format: date-time, nullable: true }
+        updated_at: { type: string, format: date-time, nullable: true }
+    Compatibilidad:
+      type: object
+      properties:
+        id: { type: integer, example: 4 }
+        confirmada: { type: integer, enum: [0, 1], example: 1 }
+        contador_confirmaciones: { type: integer, example: 12 }
+        pieza_maestra_id: { type: integer, example: 3 }
+        motocicleta_id: { type: integer, example: 12 }
+        pieza_nombre: { type: string, example: Filtro de aceite }
+        moto_modelo: { type: string, example: Ninja 150 }
+        marca_nombre: { type: string, example: Kawasaki }
+        anio_desde: { type: integer, nullable: true, example: 2018 }
+        anio_hasta: { type: integer, nullable: true, example: 2022 }
+        cilindrada: { type: string, nullable: true, example: 250 }
+        created_at: { type: string, format: date-time, nullable: true }
+        updated_at: { type: string, format: date-time, nullable: true }
+    ImportJobResult:
+      type: object
+      properties:
+        job_id: { type: integer, example: 15 }
+        estado: { type: string, example: finalizado }
+        total_items: { type: integer, example: 120 }
+        procesados: { type: integer, example: 118 }
+        errores: { type: integer, example: 2 }
   responses:
     Unauthorized:
       description: No autenticado o token inválido
@@ -321,7 +402,9 @@ paths:
       summary: Búsqueda de compatibilidades
       parameters:
         - { in: query, name: q, required: true, schema: { type: string, minLength: 2 } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
         - { in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 50, default: 50 } }
+        - { in: query, name: per_page, schema: { type: integer, minimum: 1, maximum: 50 }, description: Alias legado de limit (sobrescribe limit si se envia) }
       responses:
         '200':
           description: Resultados de búsqueda
@@ -356,7 +439,24 @@ paths:
         - { in: query, name: sort_dir, schema: { type: string, enum: [asc, desc], default: desc } }
         - { in: query, name: q, schema: { type: string } }
       responses:
-        '200': { description: OK }
+        '200':
+          description: Listado paginado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelopeSuccess'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/SearchMissedItem'
+                          meta:
+                            $ref: '#/components/schemas/MetaPaginacion'
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -385,8 +485,26 @@ paths:
         - { in: query, name: q, schema: { type: string } }
         - { in: query, name: activo, schema: { type: integer, enum: [0, 1] } }
       responses:
-        '200': { description: OK }
+        '200':
+          description: Listado paginado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelopeSuccess'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Marca'
+                          meta:
+                            $ref: '#/components/schemas/MetaPaginacion'
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
     post:
       summary: Crear marca (admin)
@@ -401,9 +519,34 @@ paths:
   /api/v1/motocicletas:
     get:
       summary: Listar motocicletas
+      parameters:
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: per_page, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+        - { in: query, name: sort_by, schema: { type: string, enum: [id, modelo, marca_id, marca_nombre, anio_desde, anio_hasta, cilindrada, created_at, updated_at], default: id } }
+        - { in: query, name: sort_dir, schema: { type: string, enum: [asc, desc], default: desc } }
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: marca_id, schema: { type: integer } }
       responses:
-        '200': { description: OK }
+        '200':
+          description: Listado paginado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelopeSuccess'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Moto'
+                          meta:
+                            $ref: '#/components/schemas/MetaPaginacion'
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
     post:
       summary: Crear motocicleta (admin)
@@ -449,9 +592,33 @@ paths:
   /api/v1/piezas:
     get:
       summary: Listar piezas
+      parameters:
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: per_page, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+        - { in: query, name: sort_by, schema: { type: string, enum: [id, nombre, slug, created_at, updated_at], default: nombre } }
+        - { in: query, name: sort_dir, schema: { type: string, enum: [asc, desc], default: desc } }
+        - { in: query, name: q, schema: { type: string } }
       responses:
-        '200': { description: OK }
+        '200':
+          description: Listado paginado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelopeSuccess'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Pieza'
+                          meta:
+                            $ref: '#/components/schemas/MetaPaginacion'
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
     post:
       summary: Crear pieza (admin)
@@ -497,9 +664,35 @@ paths:
   /api/v1/aliases:
     get:
       summary: Listar aliases
+      parameters:
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: per_page, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+        - { in: query, name: sort_by, schema: { type: string, enum: [id, alias, motocicleta_id, moto_modelo, marca_nombre, created_at, updated_at], default: alias } }
+        - { in: query, name: sort_dir, schema: { type: string, enum: [asc, desc], default: asc } }
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: motocicleta_id, schema: { type: integer } }
+        - { in: query, name: marca_id, schema: { type: integer } }
       responses:
-        '200': { description: OK }
+        '200':
+          description: Listado paginado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelopeSuccess'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Alias'
+                          meta:
+                            $ref: '#/components/schemas/MetaPaginacion'
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
     post:
       summary: Crear alias (admin)
@@ -537,9 +730,37 @@ paths:
   /api/v1/compatibilidades:
     get:
       summary: Listar compatibilidades
+      parameters:
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: per_page, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+        - { in: query, name: sort_by, schema: { type: string, enum: [id, pieza_nombre, moto_modelo, marca_nombre, confirmada, contador_confirmaciones, created_at, updated_at], default: id } }
+        - { in: query, name: sort_dir, schema: { type: string, enum: [asc, desc], default: desc } }
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: pieza_maestra_id, schema: { type: integer } }
+        - { in: query, name: motocicleta_id, schema: { type: integer } }
+        - { in: query, name: marca_id, schema: { type: integer } }
+        - { in: query, name: confirmada, schema: { type: integer, enum: [0, 1] } }
       responses:
-        '200': { description: OK }
+        '200':
+          description: Listado paginado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelopeSuccess'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Compatibilidad'
+                          meta:
+                            $ref: '#/components/schemas/MetaPaginacion'
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
     post:
       summary: Crear compatibilidad (admin)
@@ -599,7 +820,28 @@ paths:
                   type: string
                   format: binary
       responses:
-        '201': { description: Importación completada }
+        '201':
+          description: Importación completada sin errores de fila.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelopeSuccess'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ImportJobResult'
+        '200':
+          description: Importación completada con errores parciales.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelopeSuccess'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ImportJobResult'
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }

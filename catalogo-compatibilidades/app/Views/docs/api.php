@@ -20,7 +20,7 @@
   <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
   <script>
     window.ui = SwaggerUIBundle({
-      url: '<?= site_url('docs/openapi.yaml') ?>',
+      url: '<?= site_url('api/openapi.yaml') ?>',
       dom_id: '#swagger-ui',
       deepLinking: true,
       displayRequestDuration: true,
@@ -29,3 +29,4 @@
   </script>
 </body>
 </html>
+

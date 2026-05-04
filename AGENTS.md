@@ -26,5 +26,9 @@ Este repositorio contiene el proyecto **Catálogo de Compatibilidades** desarrol
 - **Monitoreo**: Registrar todas las acciones realizadas para auditoría.
 - **Compatibilidad**: Asegurar que cualquier herramienta o script sea compatible con el entorno (Windows, Docker, etc.).
 
+## Reglas clave de desarrollo
+- **Todo texto debe estar en español (México)**.
+- **Todos los archivos de texto/código deben guardarse en UTF-8 (sin caracteres rotos como `Ã`, `?` en acentos).**
+
 ## Contacto
 Para preguntas o modificaciones a estas reglas, contactar al administrador del repositorio.

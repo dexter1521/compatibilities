@@ -12,7 +12,7 @@ Integra claves de proveedor del POS (MyBusiness) con lógica de compatibilidad p
 |---|---|
 | Backend | PHP 8.2 + CodeIgniter 4.4.8 |
 | Base de datos | MariaDB 11.4 |
-| Frontend | FivaAdmin (Bootstrap 4) + HTMX 1.9 + AlpineJS 3.14 |
+| Frontend | Vue 3 + Vite + Pinia + Vue Router |
 | Infra | Docker Compose (app + nginx + db) |
 | Importador | PhpSpreadsheet 5.5 |
 
@@ -173,7 +173,15 @@ docker compose up -d --build app
 
 ## Estado SPA Interna
 
-Se inició la migración a SPA para uso interno.
+La migración a SPA ya est� completa para los módulos de gesti�n operativa:
+
+- `search` (buscador)
+- `productos`
+- `motocicletas`
+- `piezas`
+- `compatibilidades`
+- `aliases`
+- `import`
 
 - Entrada SPA servida por CI4 en: `http://localhost:8080/app`
 - Código fuente SPA: `frontend/`
@@ -204,3 +212,10 @@ Additionally, make sure that the following extensions are enabled in your PHP:
 - json (enabled by default - don't turn it off)
 - [mysqlnd](http://php.net/manual/en/mysqlnd.install.php) if you plan to use MySQL
 - [libcurl](http://php.net/manual/en/curl.requirements.php) if you plan to use the HTTP\CURLRequest library
+
+
+
+
+
+
+

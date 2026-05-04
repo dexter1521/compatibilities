@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -23,6 +25,7 @@ use PhpOffice\PhpSpreadsheet\Reader\IReader;
 class ImportService
 {
     private \CodeIgniter\Database\BaseConnection $db;
+    private string $timezone;
 
     private array $aliasCache       = [];
     private array $piezaMaestraCache = [];
@@ -54,6 +57,7 @@ class ImportService
     public function __construct()
     {
         $this->db = \Config\Database::connect();
+        $this->timezone = config('App')->appTimezone ?: 'UTC';
 
         if (!is_dir(self::UPLOAD_DIR)) {
             mkdir(self::UPLOAD_DIR, 0755, true);
@@ -63,37 +67,34 @@ class ImportService
     /**
      * Punto de entrada principal.
      * Recibe el array de $_FILES['archivo'].
-     * Devuelve ['ok' => bool, 'job_id' => int|null, 'error' => string].
+     * Devuelve ['ok' => bool, 'job_id' => int|null, 'estado' => string|null, 'total_items' => int|null, 'procesados' => int|null, 'errores' => int|null, 'error' => string].
      *
      * @param array{name:string,tmp_name:string,error:int,size:int} $file
-     * @return array{ok:bool,job_id:int|null,error:string}
+     * @return array{ok:bool,job_id:int|null,estado:string|null,total_items:int|null,procesados:int|null,errores:int|null,error:string}
      */
     public function run(array $file): array
     {
-        // ── Validar archivo ────────────────────────────────────
         if ($file['error'] !== UPLOAD_ERR_OK) {
-            return ['ok' => false, 'job_id' => null, 'error' => 'Error al subir el archivo (código ' . $file['error'] . ').'];
+            return $this->buildRunResult(false, null, 'Error al subir el archivo (código ' . $file['error'] . ').');
         }
 
         $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
         if (!in_array($ext, ['xlsx', 'xls', 'csv'], true)) {
-            return ['ok' => false, 'job_id' => null, 'error' => 'Formato no soportado. Solo se aceptan .xlsx, .xls o .csv.'];
+            return $this->buildRunResult(false, null, 'Formato no soportado. Solo se aceptan .xlsx, .xls o .csv.');
         }
 
         $maxBytes = 20 * 1024 * 1024; // 20 MB
         if ($file['size'] > $maxBytes) {
-            return ['ok' => false, 'job_id' => null, 'error' => 'El archivo supera el límite de 20 MB.'];
+            return $this->buildRunResult(false, null, 'El archivo supera el límite de 20 MB.');
         }
 
-        // ── Mover a WRITEPATH/uploads/ ─────────────────────────
-        $safeName   = date('YmdHis') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-        $destPath   = self::UPLOAD_DIR . $safeName;
+        $safeName = date('YmdHis') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+        $destPath = self::UPLOAD_DIR . $safeName;
 
         if (!rename($file['tmp_name'], $destPath)) {
-            return ['ok' => false, 'job_id' => null, 'error' => 'No se pudo guardar el archivo en el servidor.'];
+            return $this->buildRunResult(false, null, 'No se pudo guardar el archivo en el servidor.');
         }
 
-        // ── Crear import_job ───────────────────────────────────
         $this->db->table('import_jobs')->insert([
             'archivo_nombre' => $file['name'],
             'estado'         => 'procesando',
@@ -103,13 +104,12 @@ class ImportService
         ]);
         $jobId = (int) $this->db->insertID();
 
-        // ── Leer spreadsheet ───────────────────────────────────
         try {
             $reader = $this->buildReader($ext, $destPath);
             $sheet  = $reader->load($destPath)->getActiveSheet();
         } catch (\Throwable $e) {
             $this->failJob($jobId, 'No se pudo leer el archivo: ' . $e->getMessage());
-            return ['ok' => false, 'job_id' => $jobId, 'error' => 'Archivo ilegible: ' . $e->getMessage()];
+            return $this->buildRunResult(false, $jobId, 'Archivo ilegible: ' . $e->getMessage());
         }
 
         $rows    = $sheet->toArray(null, true, true, false);
@@ -118,10 +118,9 @@ class ImportService
 
         if (empty($data)) {
             $this->failJob($jobId, 'El archivo no tiene filas de datos.');
-            return ['ok' => false, 'job_id' => $jobId, 'error' => 'El archivo está vacío o no tiene datos.'];
+            return $this->buildRunResult(false, $jobId, 'El archivo está vacío o no tiene datos.');
         }
 
-        // ── Insertar import_items ──────────────────────────────
         $totalItems = 0;
         $startFila  = $headers['skip'] + 1;
 
@@ -139,7 +138,7 @@ class ImportService
                 : '';
 
             if ($claveProveedor === '' && $nombre === '') {
-                continue; // fila vacía
+                continue;
             }
 
             $this->db->table('import_items')->insert([
@@ -161,7 +160,6 @@ class ImportService
             ->where('id', $jobId)
             ->update(['total_items' => $totalItems, 'updated_at' => date('Y-m-d H:i:s')]);
 
-        // ── Procesar cada item ─────────────────────────────────
         $procesados = 0;
         $errores    = 0;
 
@@ -182,29 +180,33 @@ class ImportService
                 $this->db->table('import_items')
                     ->where('id', $item['id'])
                     ->update([
-                        'estado'         => 'error',
-                        'mensaje_error'  => mb_substr($e->getMessage(), 0, 500),
-                        'updated_at'     => date('Y-m-d H:i:s'),
+                        'estado'        => 'error',
+                        'mensaje_error' => mb_substr($e->getMessage(), 0, 500),
+                        'updated_at'    => date('Y-m-d H:i:s'),
                     ]);
                 $errores++;
             }
         }
 
-        // ── Finalizar job ──────────────────────────────────────
+        $estado = $this->buildImportState($procesados, $errores);
+
         $this->db->table('import_jobs')
             ->where('id', $jobId)
             ->update([
-                'estado'         => $errores > 0 && $procesados === 0 ? 'error' : 'finalizado',
+                'estado'         => $estado,
                 'procesados'     => $procesados,
                 'errores'        => $errores,
                 'finalizado_en'  => date('Y-m-d H:i:s'),
                 'updated_at'     => date('Y-m-d H:i:s'),
             ]);
 
-        return ['ok' => true, 'job_id' => $jobId, 'error' => ''];
+        return $this->buildRunResult(true, $jobId, '', [
+            'total_items' => $totalItems,
+            'procesados'  => $procesados,
+            'errores'     => $errores,
+            'estado'      => $estado,
+        ]);
     }
-
-    // ── Privados ────────────────────────────────────────────────────────────
 
     /**
      * Upsert proveedor → upsert producto.
@@ -341,6 +343,68 @@ class ImportService
             return $reader;
         }
         return IOFactory::createReaderForFile($path);
+    }
+
+    private function buildRunResult(bool $ok, ?int $jobId, string $error, array $extra = []): array
+    {
+        $job = $this->getImportJobSummary($jobId);
+
+        return [
+            'ok'         => $ok,
+            'job_id'     => $jobId,
+            'estado'     => $extra['estado']     ?? $job['estado'],
+            'total_items'=> $extra['total_items'] ?? $job['total_items'],
+            'procesados' => $extra['procesados']  ?? $job['procesados'],
+            'errores'    => $extra['errores']     ?? $job['errores'],
+            'error'      => $error,
+        ];
+    }
+
+    private function getImportJobSummary(?int $jobId): array
+    {
+        if ($jobId === null) {
+            return [
+                'estado' => null,
+                'total_items' => null,
+                'procesados' => null,
+                'errores' => null,
+            ];
+        }
+
+        $row = $this->db->table('import_jobs')
+            ->select('estado, total_items, procesados, errores')
+            ->where('id', $jobId)
+            ->get()
+            ->getRowArray();
+
+        if (!$row) {
+            return [
+                'estado' => null,
+                'total_items' => null,
+                'procesados' => null,
+                'errores' => null,
+            ];
+        }
+
+        return [
+            'estado' => $row['estado'] ?? null,
+            'total_items' => isset($row['total_items']) ? (int) $row['total_items'] : null,
+            'procesados' => isset($row['procesados']) ? (int) $row['procesados'] : null,
+            'errores' => isset($row['errores']) ? (int) $row['errores'] : null,
+        ];
+    }
+
+    private function buildImportState(int $procesados, int $errores): string
+    {
+        if ($errores > 0 && $procesados === 0) {
+            return 'error';
+        }
+
+        if ($errores > 0) {
+            return 'finalizado_con_errores';
+        }
+
+        return 'finalizado';
     }
 
     private function failJob(int $jobId, string $msg): void
@@ -731,3 +795,4 @@ class ImportService
         return [$desde, $hasta];
     }
 }
+

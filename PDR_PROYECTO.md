@@ -1,208 +1,286 @@
-📄 PDR — Catálogo Inteligente de Compatibilidades
+# 📄 PRD Técnico — Migración a API REST
 
-Proyecto: Shark Motors
-Versión: 1.0
-Estado: Aprobación para desarrollo MVP
+# Proyecto: Shark Compatibility Engine
 
-1. 🎯 Objetivo del producto
+# Cliente: Shark Motors
 
-Desarrollar un sistema que permita:
+# Versión: 2.0
 
-Identificar rápidamente qué refacción es compatible con una motocicleta.
+# Estado: Listo para ejecución con agente IA
 
-Reduciendo:
+---
 
-tiempo de atención en mostrador
-errores de recomendación
-dependencia del conocimiento del vendedor
+# 1. 🎯 Objetivo General
 
-2. 🧠 Problema
+Evolucionar el backend actual del sistema de compatibilidades de refacciones para motocicletas hacia una arquitectura **API RESTful profesional**, manteniendo la lógica funcional existente y reutilizando lo que ya sirve.
 
-Actualmente:
+El objetivo NO es rehacer todo desde cero.
 
-MyBusiness POS gestiona ventas e inventario
-pero no resuelve compatibilidades
+El objetivo SÍ es:
 
-Ejemplo real:
+- conservar reglas de negocio actuales
+- refactorizar estructura
+- exponer endpoints REST limpios
+- separar frontend del backend
+- preparar escalabilidad futura
+- permitir app móvil / ecommerce / integraciones futuras
 
-Cliente: “Balatas para FT150”
+---
 
-Problemas actuales:
+# 2. 🧠 Contexto Actual
 
-búsqueda manual
-conocimiento empírico
-inconsistencias
-pérdida de ventas
-3. 💡 Solución
+Existe un backend funcional parcial desarrollado en PHP.
 
-Un sistema web que:
+Características actuales:
 
-centraliza compatibilidades pieza ↔ motocicleta
-permite búsqueda rápida
-muestra equivalencias entre proveedores
-aprende con el uso (confirmaciones)
-4. 🧩 Principio clave
+- resuelve parte del flujo operativo
+- lógica mezclada entre vistas/controladores/modelos
+- respuestas no estandarizadas
+- no sigue estándar REST
+- posible acoplamiento fuerte con frontend
+- útil como base de negocio
 
-Separación de responsabilidades:
+Esto significa:
 
-Sistema	Función
-MyBusiness POS	Operación (ventas, inventario)
-Catálogo	Inteligencia (compatibilidades)
-5. ⚙️ Alcance del MVP
-Incluye
-Importación de productos desde Excel
-Búsqueda por motocicleta
-Búsqueda por texto
-Registro de compatibilidades
-Equivalencias entre proveedores
-Confirmación desde mostrador
-Registro de búsquedas no encontradas
-Alias de motocicletas
-No incluye
-sincronización en tiempo real con POS
-inventario o precios
-ecommerce
-roles avanzados
-multi-tenant
-6. 👤 Usuarios
-Usuario principal
-Vendedor en mostrador
-Usuario secundario
-Administrador (captura de datos)
-7. 🔄 Flujo principal
-Flujo operativo
-Se registra producto en POS
-Se importa al catálogo
-Se vincula con pieza y moto
-Cliente solicita pieza
-Vendedor busca en sistema
-Sistema devuelve opciones
-Venta se realiza en POS
-8. 🔍 Funcionalidades
-8.1 Buscador
+👉 ya existe conocimiento codificado  
+👉 no se debe desechar sin analizar
 
-Entrada:
+---
 
-balata ft150
+# 3. 🎯 Objetivo de la Migración
 
-Salida:
+Convertir el backend actual en una plataforma API-first.
 
-pieza identificada
-claves proveedor
-motos compatibles
-8.2 Compatibilidades
+Debe quedar preparado para:
 
-Relación:
+- Frontend web Bootstrap / HTMX
+- futura app móvil
+- futura app mostrador táctil
+- integración con Mercado Libre
+- integración WooCommerce
+- sincronización con POS
+- IA futura para búsqueda semántica
 
-pieza ↔ motocicleta
+---
 
-Incluye:
+# 4. 🧱 Estrategia Técnica Obligatoria
 
-nivel de confianza
-notas
-confirmaciones
-8.3 Equivalencias
+## No reescribir todo desde cero.
 
-Permite:
+Aplicar estrategia:
 
-múltiples productos para una misma pieza
+### Fase 1 — Auditoría
 
-Ejemplo:
+El agente debe revisar:
 
-XAX
-P102
-BTA150
-8.4 Confirmación
+- controladores existentes
+- modelos existentes
+- helpers
+- consultas SQL
+- reglas de negocio reutilizables
+- dependencias innecesarias
 
-Acción:
+Clasificar:
 
-Funcionó
+- reutilizable
+- refactorizable
+- obsoleto
+- duplicado
+- riesgoso
 
-Resultado:
+---
 
-incrementa confianza
-valida compatibilidad
-8.5 Búsquedas no encontradas
+### Fase 2 — API REST
 
-Captura automática de:
+Construir nueva capa API manteniendo lógica útil.
 
-términos buscados
-frecuencia
+---
 
-Uso:
+### Fase 3 — Limpieza gradual
 
-priorizar captura
-8.6 Importador Excel
+Migrar módulos viejos sin romper operación.
 
-Permite:
+---
 
-cargar catálogo inicial
-acelerar arranque
-9. 🗄️ Modelo de datos (alto nivel)
-
-Entidades principales:
-
-Motocicletas
-Piezas
-Productos
-Compatibilidades
-Equivalencias
-Búsquedas
-10. 📊 Métricas de éxito
-% de productos catalogados
-búsquedas exitosas
-búsquedas no encontradas
-confirmaciones registradas
-tiempo de atención
-11. ⚠️ Riesgos
-Riesgo	Impacto	Mitigación
-Captura lenta	Alto	Importador + priorización
-Datos inconsistentes	Medio	Alias + normalización
-Falta de uso	Alto	UI simple
-12. 🧱 Stack tecnológico
+# 5. ⚙️ Stack Deseado
 
 Backend:
 
-CodeIgniter 4
+- PHP 8.2+
+- Laravel 11 preferente
+
+o mantener:
+
+- CodeIgniter 4 (si acelera entrega)
 
 Base de datos:
 
-MariaDB
-
-Frontend:
-
-Template-FivaAdmin
-Bootstrap
-HTMX
+- MariaDB
 
 Infra:
 
-Docker
-13. ⏱️ Estimación MVP
+- Docker
+- Nginx o Caddy
+- Redis opcional
 
-Tiempo:
+Auth:
 
-8 – 16 horas (con IA)
-14. 🚀 Entregables MVP
-API funcional
-base de datos
+- JWT
+
+---
+
+# 6. 📦 Recursos REST Requeridos
+
+## Productos
+
+```http
+GET    /api/v1/productos
+GET    /api/v1/productos/{id}
+POST   /api/v1/productos
+PUT    /api/v1/productos/{id}
+DELETE /api/v1/productos/{id}
+Motocicletas
+GET /api/v1/motocicletas
+POST /api/v1/motocicletas
+PUT /api/v1/motocicletas/{id}
+Piezas
+GET /api/v1/piezas
+POST /api/v1/piezas
+Compatibilidades
+GET /api/v1/compatibilidades
+POST /api/v1/compatibilidades
+PUT /api/v1/compatibilidades/{id}
+DELETE /api/v1/compatibilidades/{id}
+PATCH /api/v1/compatibilidades/{id}/confirmar
+Alias
+GET /api/v1/aliases
+POST /api/v1/aliases
+Buscador Inteligente
+GET /api/v1/search?q=balata ft150
+
+Respuesta esperada:
+
+productos encontrados
+motos compatibles
+equivalencias
+score relevancia
+Importador Excel
+POST /api/v1/import/productos
+Búsquedas no encontradas
+GET /api/v1/search-missed
+7. 📄 Estándar de Respuesta JSON
+
+Todas las respuestas deben usar:
+
+{
+  "success": true,
+  "message": "Consulta exitosa",
+  "data": [],
+  "errors": null
+}
+
+Errores:
+
+{
+  "success": false,
+  "message": "Validación fallida",
+  "data": null,
+  "errors": {
+    "campo": ["requerido"]
+  }
+}
+8. 🔐 Seguridad
+
+Implementar:
+
+JWT login
+refresh token opcional
+roles:
+admin
+vendedor
+rate limit
+logs auditoría
+9. 🗄️ Modelo de Datos Recomendado
+
+Tablas mínimas:
+
+productos
+piezas
+motocicletas
+marcas_moto
+modelos_moto
+compatibilidades
+aliases
+search_logs
+users
+roles
+10. 🧠 Reglas de Negocio Clave
+Confirmación positiva
+
+Cuando vendedor confirma:
+
+“sí funcionó”
+
+Incrementar score de compatibilidad.
+
+Búsqueda fallida
+
+Guardar término buscado.
+
+Alias
+
+FT150 = FT 150 = Italika FT150
+
+Equivalencias
+
+Varias marcas pueden cubrir misma pieza.
+
+11. 🚫 Lo que NO debe hacer el agente
+rehacer todo sin revisar código actual
+romper base de datos actual sin migración
+mezclar vistas con API
+usar respuestas HTML
+hardcodear lógica
+eliminar reglas existentes sin documentar
+12. 📈 Entregables Esperados
+Primera entrega:
+estructura nueva backend
+rutas REST
+auth JWT
+módulo productos
+módulo búsqueda
+Segunda entrega:
+compatibilidades
+alias
+confirmaciones
 importador Excel
-buscador operativo
-UI básica
-sistema usable en mostrador
-15. 🧠 Valor estratégico
+Tercera entrega:
+métricas
+documentación Swagger
+tests básicos
+13. 📊 KPI Técnicos
+tiempo respuesta < 400ms
+búsqueda < 1 seg
+endpoints documentados
+código modular
+cobertura mínima tests 40%
+14. 🧠 Instrucción Directa al Agente IA
 
-Este sistema construye:
+Analiza el proyecto existente y reutiliza lo valioso.
 
-una base de conocimiento propia
-una ventaja competitiva
-un activo difícil de replicar
-16. 📌 Conclusión
+No destruyas lógica ya funcional.
 
-El proyecto:
+Refactoriza hacia arquitectura REST profesional.
 
-es viable
-tiene impacto directo en ventas
-requiere disciplina en captura
+Prioriza velocidad + mantenibilidad + escalabilidad.
 
-El valor no está en el código, está en los datos.
+Cada cambio relevante documentarlo.
+
+15. 🎯 Resultado Final Esperado
+
+Backend moderno que conserve experiencia operativa actual pero quede listo para crecer como producto comercial.
+
+16. Nombre Interno del Sistema
+
+Shark Compatibility Engine API
+```

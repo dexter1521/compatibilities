@@ -20,11 +20,17 @@ class SearchController extends BaseApiController
     public function index(): ResponseInterface
     {
         $term = trim((string) ($this->request->getGet('q') ?? ''));
+        $page = (int) ($this->request->getGet('page') ?? 1);
+        $legacyPerPage = $this->request->getGet('per_page');
         $limit = (int) ($this->request->getGet('limit') ?? 50);
+
+        if ($legacyPerPage !== null) {
+            $limit = (int) $legacyPerPage;
+        }
 
         if ($term === '' || mb_strlen($term) < 2) {
             return $this->respondValidationErrors([
-                'q' => ['El término debe contener al menos 2 caracteres.'],
+                'q' => ['El tÃ©rmino debe contener al menos 2 caracteres.'],
             ]);
         }
 
@@ -33,18 +39,15 @@ class SearchController extends BaseApiController
                 'limit' => ['Debe estar entre 1 y 50.'],
             ]);
         }
+        if ($page < 1) {
+            return $this->respondValidationErrors([
+                'page' => ['Debe ser mayor o igual a 1.'],
+            ]);
+        }
 
-        $results = $this->service->search($term, $limit);
+        $results = $this->service->search($term, $limit, $page);
 
-        return $this->respondSuccess([
-            'items' => $results,
-            'meta'  => [
-                'q' => $term,
-                'limit' => $limit,
-                'total' => count($results),
-                'timezone' => config('App')->appTimezone ?: 'UTC',
-            ],
-        ], 'Búsqueda completada.');
+        return $this->respondSuccess($results, 'BÃºsqueda completada.');
     }
 
     public function missed(): ResponseInterface
@@ -69,7 +72,7 @@ class SearchController extends BaseApiController
             ]);
         }
 
-        return $this->respondSuccess($this->service->listSearchMissed($query), 'Búsquedas no encontradas obtenidas.');
+        return $this->respondSuccess($this->service->listSearchMissed($query), 'BÃºsquedas no encontradas obtenidas.');
     }
 
     public function confirmarCompatibilidad(int $id): ResponseInterface

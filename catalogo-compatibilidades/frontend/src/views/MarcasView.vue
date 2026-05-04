@@ -1,10 +1,10 @@
 ﻿<template>
   <section>
     <div class="section-head">
-      <h2>Motocicletas</h2>
+      <h2>Marcas</h2>
       <div class="section-actions">
         <button @click="load" :disabled="loading">Recargar</button>
-        <button v-if="isAdmin" class="success" @click="openCreate">Nueva motocicleta</button>
+        <button v-if="isAdmin" class="success" @click="openCreate">Nueva marca</button>
       </div>
     </div>
 
@@ -15,18 +15,18 @@
         <thead>
           <tr>
             <th>ID</th>
-            <th>Marca</th>
-            <th>Modelo</th>
-            <th>Año</th>
+            <th>Nombre</th>
+            <th>Slug</th>
+            <th>Activa</th>
             <th v-if="isAdmin">Acciones</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="row in rows" :key="row.id">
             <td>{{ row.id }}</td>
-            <td>{{ getMarcaName(row) }}</td>
-            <td>{{ row.modelo }}</td>
-            <td>{{ row.anio_desde || '-' }} - {{ row.anio_hasta || '-' }}</td>
+            <td>{{ row.nombre }}</td>
+            <td>{{ row.slug }}</td>
+            <td>{{ row.activo ? 'Sí' : 'No' }}</td>
             <td v-if="isAdmin">
               <div class="actions">
                 <div class="row-menu">
@@ -34,7 +34,7 @@
                     class="icon-btn"
                     @click="toggleMenu(row.id)"
                     type="button"
-                    :aria-label="`Acciones de ${row.modelo}`"
+                    :aria-label="`Acciones de ${row.nombre}`"
                   >
                     ⋮
                   </button>
@@ -52,22 +52,13 @@
 
     <div v-if="showModal" class="modal-backdrop" @click.self="closeModal">
       <div class="modal">
-        <h3>{{ editingId ? 'Editar motocicleta' : 'Nueva motocicleta' }}</h3>
-        <form class="inline-form" @submit.prevent="saveMoto">
-          <select v-model.number="form.marca_id" required>
-            <option value="" disabled>Selecciona una marca</option>
-            <option
-              v-for="m in brands"
-              :key="m.id"
-              :value="m.id"
-            >
-              {{ m.nombre }}
-            </option>
+        <h3>{{ editingId ? 'Editar marca' : 'Nueva marca' }}</h3>
+        <form class="inline-form" @submit.prevent="saveMarca">
+          <input v-model="form.nombre" placeholder="Nombre de marca" required />
+          <select v-model="form.activo">
+            <option :value="1">Sí</option>
+            <option :value="0">No</option>
           </select>
-          <input v-model="form.modelo" placeholder="Modelo" required />
-          <input v-model.number="form.anio_desde" type="number" min="1900" max="2100" placeholder="Año desde" />
-          <input v-model.number="form.anio_hasta" type="number" min="1900" max="2100" placeholder="Año hasta" />
-          <input v-model="form.cilindrada" placeholder="Cilindrada" />
           <div class="modal-actions">
             <button type="button" class="ghost" @click="closeModal">Cancelar</button>
             <button :disabled="saving">{{ saving ? 'Guardando...' : 'Guardar' }}</button>
@@ -90,52 +81,32 @@ const loading = ref(false)
 const saving = ref(false)
 const error = ref('')
 const rows = ref([])
-const brands = ref([])
 const showModal = ref(false)
 const editingId = ref(null)
 const menuOpenForId = ref(null)
 const form = ref({
-  marca_id: '',
-  modelo: '',
-  anio_desde: '',
-  anio_hasta: '',
-  cilindrada: ''
+  nombre: '',
+  activo: 1
 })
 
 const load = async () => {
   loading.value = true
   error.value = ''
   try {
-    const [motosResp, marcasResp] = await Promise.all([
-      api.get('/motocicletas'),
-      api.get('/marcas')
-    ])
-    rows.value = motosResp.data?.data?.items || []
-    brands.value = marcasResp.data?.data?.items || []
+    const resp = await api.get('/marcas')
+    rows.value = resp.data?.data?.items || []
   } catch (e) {
-    error.value = e?.response?.data?.message || 'No se pudieron cargar motocicletas.'
+    error.value = e?.response?.data?.message || 'No se pudieron cargar las marcas.'
   } finally {
     loading.value = false
   }
 }
 
-const getMarcaName = (row) => {
-  if (row?.marca_nombre) {
-    return row.marca_nombre
-  }
-
-  const found = brands.value.find((m) => Number(m.id) === Number(row?.marca_id))
-  return found?.nombre || row?.marca_id || '-'
-}
-
 const openCreate = () => {
   editingId.value = null
   form.value = {
-    marca_id: '',
-    modelo: '',
-    anio_desde: '',
-    anio_hasta: '',
-    cilindrada: ''
+    nombre: '',
+    activo: 1
   }
   showModal.value = true
   closeMenu()
@@ -144,11 +115,8 @@ const openCreate = () => {
 const openEdit = (row) => {
   editingId.value = row.id
   form.value = {
-    marca_id: row.marca_id || '',
-    modelo: row.modelo || '',
-    anio_desde: row.anio_desde || '',
-    anio_hasta: row.anio_hasta || '',
-    cilindrada: row.cilindrada || ''
+    nombre: row.nombre || '',
+    activo: row.activo ? 1 : 0
   }
   showModal.value = true
   closeMenu()
@@ -158,25 +126,19 @@ const closeModal = () => {
   showModal.value = false
 }
 
-const saveMoto = async () => {
+const saveMarca = async () => {
   saving.value = true
   error.value = ''
   try {
     if (editingId.value) {
-      await api.put(`/motocicletas/${editingId.value}`, {
-        marca_id: Number(form.value.marca_id || 0),
-        modelo: form.value.modelo,
-        anio_desde: form.value.anio_desde === '' ? null : Number(form.value.anio_desde),
-        anio_hasta: form.value.anio_hasta === '' ? null : Number(form.value.anio_hasta),
-        cilindrada: form.value.cilindrada || null
+      await api.put(`/marcas/${editingId.value}`, {
+        nombre: form.value.nombre,
+        activo: Number(form.value.activo)
       })
     } else {
-      await api.post('/motocicletas', {
-        marca_id: Number(form.value.marca_id || 0),
-        modelo: form.value.modelo,
-        anio_desde: form.value.anio_desde === '' ? null : Number(form.value.anio_desde),
-        anio_hasta: form.value.anio_hasta === '' ? null : Number(form.value.anio_hasta),
-        cilindrada: form.value.cilindrada || null
+      await api.post('/marcas', {
+        nombre: form.value.nombre,
+        activo: Number(form.value.activo)
       })
     }
 
@@ -184,8 +146,8 @@ const saveMoto = async () => {
     await load()
   } catch (e) {
     error.value = e?.response?.data?.message || (editingId.value
-      ? 'No se pudo actualizar motocicleta.'
-      : 'No se pudo crear motocicleta.')
+      ? 'No se pudo actualizar la marca.'
+      : 'No se pudo crear la marca.')
   } finally {
     saving.value = false
   }
@@ -193,12 +155,12 @@ const saveMoto = async () => {
 
 const remove = async (id) => {
   closeMenu()
-  if (!confirm(`¿Eliminar motocicleta #${id}?`)) return
+  if (!confirm(`¿Eliminar marca #${id}?`)) return
   try {
-    await api.delete(`/motocicletas/${id}`)
+    await api.delete(`/marcas/${id}`)
     await load()
   } catch (e) {
-    error.value = e?.response?.data?.message || 'No se pudo eliminar motocicleta.'
+    error.value = e?.response?.data?.message || 'No se pudo eliminar la marca.'
   }
 }
 
@@ -288,7 +250,7 @@ onMounted(load)
 }
 
 .modal {
-  width: min(680px, 100%);
+  width: min(460px, 100%);
   background: #fff;
   border-radius: 12px;
   border: 1px solid #e5e7eb;
@@ -303,7 +265,6 @@ onMounted(load)
 
 .modal .inline-form {
   margin: 0;
-  grid-template-columns: repeat(2, minmax(140px, 1fr));
 }
 
 .modal .inline-form > * {
@@ -314,7 +275,6 @@ onMounted(load)
   display: flex;
   gap: 8px;
   justify-content: flex-end;
-  grid-column: 1 / -1;
   margin-top: 8px;
 }
 
@@ -333,10 +293,6 @@ onMounted(load)
 
   .section-actions {
     flex-wrap: wrap;
-  }
-
-  .modal .inline-form {
-    grid-template-columns: 1fr;
   }
 }
 </style>

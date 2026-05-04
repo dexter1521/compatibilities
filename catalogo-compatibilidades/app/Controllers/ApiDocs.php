@@ -13,9 +13,15 @@ class ApiDocs extends BaseController
         return view('docs/api');
     }
 
-    public function spec(): ResponseInterface
+    public function spec(string $filename = 'openapi.yaml'): ResponseInterface
     {
-        $path = ROOTPATH . 'docs/openapi.yaml';
+        if (!str_ends_with((string) $filename, '.yaml') && !str_ends_with((string) $filename, '.yml')) {
+            return $this->response
+                ->setStatusCode(ResponseInterface::HTTP_NOT_FOUND)
+                ->setBody('Especificacion no encontrada');
+        }
+
+        $path = ROOTPATH . 'openapi/' . $filename;
 
         if (!is_file($path)) {
             return $this->response
@@ -30,3 +36,4 @@ class ApiDocs extends BaseController
             ->setBody($content);
     }
 }
+
