@@ -58,6 +58,52 @@ final class ApiV1CatalogoEndpointsTest extends TestCase
         $this->assertSame(404, $missingPieza['status']);
     }
 
+    public function testMarcasCrudAnd404(): void
+    {
+        $token = $this->getAccessToken('admin@sharkmotors.local', 'Admin123!');
+        $suffix = (string) time() . (string) random_int(100, 999);
+        $brand = 'Marca Caso ' . $suffix;
+
+        $list = $this->request('GET', '/api/v1/marcas', null, [
+            'Authorization: Bearer ' . $token,
+        ]);
+        $this->assertSame(200, $list['status']);
+        $this->assertIsArray($list['json']['data']['items'] ?? null);
+
+        $create = $this->request('POST', '/api/v1/marcas', [
+            'nombre' => $brand,
+        ], [
+            'Authorization: Bearer ' . $token,
+        ]);
+        $this->assertSame(201, $create['status']);
+        $marcaId = (int) ($create['json']['data']['id'] ?? 0);
+        $this->assertGreaterThan(0, $marcaId);
+
+        $show = $this->request('GET', '/api/v1/marcas/' . $marcaId, null, [
+            'Authorization: Bearer ' . $token,
+        ]);
+        $this->assertSame(200, $show['status']);
+        $this->assertSame($brand, $show['json']['data']['nombre'] ?? '');
+
+        $update = $this->request('PUT', '/api/v1/marcas/' . $marcaId, [
+            'nombre' => $brand . ' Editada',
+            'activo' => 0,
+        ], [
+            'Authorization: Bearer ' . $token,
+        ]);
+        $this->assertSame(200, $update['status']);
+
+        $delete = $this->request('DELETE', '/api/v1/marcas/' . $marcaId, null, [
+            'Authorization: Bearer ' . $token,
+        ]);
+        $this->assertSame(200, $delete['status']);
+
+        $missing = $this->request('GET', '/api/v1/marcas/' . $marcaId, null, [
+            'Authorization: Bearer ' . $token,
+        ]);
+        $this->assertSame(404, $missing['status']);
+    }
+
     public function testAliasesAndCompatibilidadesFlowAnd404(): void
     {
         $adminToken = $this->getAccessToken('admin@sharkmotors.local', 'Admin123!');

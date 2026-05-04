@@ -18,7 +18,7 @@ $routes->get('/search',            'Search::results');
 $routes->get('/search/por-moto',   'Search::porMoto');
 $routes->get('/cascada/modelos',   'Search::cascadaModelos');
 
-// ── CRUD Motocicletas ──────────────────────────────────────────
+// CRUD Motocicletas
 $routes->get('/motos',                 'Motos::index');
 $routes->get('/motos/create',          'Motos::create');
 $routes->post('/motos/store',          'Motos::store');
@@ -29,7 +29,7 @@ $routes->get('/motos/(:num)/aliases',         'Motos::aliases/$1');
 $routes->post('/motos/(:num)/aliases/store',  'Motos::storeAlias/$1');
 $routes->post('/motos/alias/(:num)/delete',   'Motos::deleteAlias/$1');
 
-// ── CRUD Marcas ────────────────────────────────────────────────
+// CRUD Marcas
 $routes->get('/marcas',                'Marcas::index');
 $routes->get('/marcas/create',         'Marcas::create');
 $routes->post('/marcas/store',         'Marcas::store');
@@ -38,7 +38,7 @@ $routes->post('/marcas/(:num)/update', 'Marcas::update/$1');
 $routes->post('/marcas/(:num)/toggle', 'Marcas::toggle/$1');
 $routes->post('/marcas/(:num)/delete', 'Marcas::delete/$1');
 
-// ── CRUD Piezas Maestras ───────────────────────────────────────
+// CRUD Piezas Maestras
 $routes->get('/piezas',                'Piezas::index');
 $routes->get('/piezas/create',         'Piezas::create');
 $routes->post('/piezas/store',         'Piezas::store');
@@ -46,7 +46,7 @@ $routes->get('/piezas/(:num)/edit',    'Piezas::edit/$1');
 $routes->post('/piezas/(:num)/update', 'Piezas::update/$1');
 $routes->post('/piezas/(:num)/delete', 'Piezas::delete/$1');
 
-// ── CRUD Compatibilidades ──────────────────────────────────────
+// CRUD Compatibilidades
 $routes->get('/compatibilidades',                'Compatibilidades::index');
 $routes->get('/compatibilidades/create',         'Compatibilidades::create');
 $routes->post('/compatibilidades/store',         'Compatibilidades::store');
@@ -54,10 +54,10 @@ $routes->get('/compatibilidades/(:num)/edit',    'Compatibilidades::edit/$1');
 $routes->post('/compatibilidades/(:num)/update', 'Compatibilidades::update/$1');
 $routes->post('/compatibilidades/(:num)/delete', 'Compatibilidades::delete/$1');
 
-// Confirmación desde Buscador (HTMX POST)
+// Confirmacion desde Buscador (HTMX POST)
 $routes->post('/compatibilidades/(:num)/confirm', 'Search::confirm/$1');
 
-// ── Importador ─────────────────────────────────────────────────
+// Importador
 $routes->get('/import',              'Import::index');
 $routes->post('/import/upload',      'Import::upload');
 $routes->get('/import/job/(:num)',   'Import::jobDetail/$1');
@@ -73,6 +73,12 @@ $routes->group('api/v1', static function ($routes) {
     $routes->get('auth/me', 'Api\V1\AuthController::me');
     $routes->post('auth/logout', 'Api\V1\AuthController::logout');
 
+    // Marcas
+    $routes->get('marcas', 'Api\V1\MarcasController::index');
+    $routes->get('marcas/(:num)', 'Api\V1\MarcasController::show/$1');
+    $routes->post('marcas', 'Api\V1\MarcasController::create', ['filter' => 'role:admin']);
+    $routes->put('marcas/(:num)', 'Api\V1\MarcasController::update/$1', ['filter' => 'role:admin']);
+    $routes->delete('marcas/(:num)', 'Api\V1\MarcasController::delete/$1', ['filter' => 'role:admin']);
     // Productos
     $routes->get('productos', 'Api\V1\ProductosController::index');
     $routes->get('productos/(:num)', 'Api\V1\ProductosController::show/$1');
@@ -115,3 +121,4 @@ $routes->group('api/v1', static function ($routes) {
     // Importador
     $routes->post('import/productos', 'Api\V1\ImportController::productos', ['filter' => 'role:admin']);
 });
+
