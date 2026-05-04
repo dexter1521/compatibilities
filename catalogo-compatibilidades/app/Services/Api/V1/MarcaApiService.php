@@ -4,18 +4,18 @@ declare(strict_types=1);
 
 namespace App\Services\Api\V1;
 
-use App\Models\PiezaMaestraModel;
+use App\Models\MarcaModel;
 use CodeIgniter\Database\BaseConnection;
 
-class PiezaApiService
+class MarcaApiService
 {
-    private PiezaMaestraModel $model;
+    private MarcaModel $model;
     private BaseConnection $db;
     private string $timezone;
 
     public function __construct()
     {
-        $this->model = new PiezaMaestraModel();
+        $this->model = new MarcaModel();
         $this->db = \Config\Database::connect();
         $this->timezone = config('App')->appTimezone ?: 'UTC';
     }
@@ -27,25 +27,31 @@ class PiezaApiService
         $offset = ($page - 1) * $perPage;
         $sortBy = (string) ($query['sort_by'] ?? 'id');
         $sortDir = strtoupper((string) ($query['sort_dir'] ?? 'DESC')) === 'ASC' ? 'ASC' : 'DESC';
+
         $search = trim((string) ($query['q'] ?? ''));
+        $activo = array_key_exists('activo', $query) ? (int) $query['activo'] : null;
 
         $sortMap = [
-            'id' => 'p.id',
-            'nombre' => 'p.nombre',
-            'slug' => 'p.slug',
-            'created_at' => 'p.created_at',
-            'updated_at' => 'p.updated_at',
+            'id' => 'm.id',
+            'nombre' => 'm.nombre',
+            'slug' => 'm.slug',
+            'activo' => 'm.activo',
+            'created_at' => 'm.created_at',
+            'updated_at' => 'm.updated_at',
         ];
         $orderColumn = $sortMap[$sortBy] ?? $sortMap['id'];
 
-        $builder = $this->db->table('piezas_maestras p')
-            ->select('p.id, p.nombre, p.slug, p.created_at, p.updated_at');
+        $builder = $this->db->table('marcas m')
+            ->select('m.id, m.nombre, m.slug, m.activo, m.created_at, m.updated_at');
 
         if ($search !== '') {
             $builder->groupStart()
-                ->like('p.nombre', $search)
-                ->orLike('p.slug', $search)
+                ->like('m.nombre', $search)
+                ->orLike('m.slug', $search)
                 ->groupEnd();
+        }
+        if ($activo !== null && in_array($activo, [0, 1], true)) {
+            $builder->where('m.activo', $activo);
         }
 
         $total = (clone $builder)->countAllResults();
@@ -56,7 +62,7 @@ class PiezaApiService
             ->get()
             ->getResultArray();
 
-        $items = array_map(fn(array $row): array => $this->formatPiezaRow($row), $items);
+        $items = array_map(fn(array $row): array => $this->formatMarcaRow($row), $items);
 
         return [
             'items' => $items,
@@ -69,6 +75,7 @@ class PiezaApiService
                 'sort_dir'  => strtolower($sortDir),
                 'filters'   => [
                     'q' => $search !== '' ? $search : null,
+                    'activo' => $activo,
                 ],
                 'timezone'  => $this->timezone,
             ],
@@ -103,6 +110,7 @@ class PiezaApiService
         if ($excludeId !== null) {
             $q->where('id !=', $excludeId);
         }
+
         return $q->first() !== null;
     }
 
@@ -110,7 +118,7 @@ class PiezaApiService
     {
         helper('url');
 
-        $base = url_title(mb_strtolower(trim($nombre)), '-', true) ?: 'pieza';
+        $base = url_title(mb_strtolower(trim($nombre)), '-', true) ?: 'marca';
         $slug = $base;
         $i = 1;
 
@@ -126,7 +134,7 @@ class PiezaApiService
         }
     }
 
-    private function formatPiezaRow(array $row): array
+    private function formatMarcaRow(array $row): array
     {
         $row['created_at'] = $this->formatDateTime($row['created_at'] ?? null);
         $row['updated_at'] = $this->formatDateTime($row['updated_at'] ?? null);

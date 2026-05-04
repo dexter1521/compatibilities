@@ -19,7 +19,39 @@ class AliasesController extends BaseApiController
 
     public function index(): ResponseInterface
     {
-        return $this->respondSuccess(['items' => $this->service->list()], 'Listado de aliases obtenido.');
+        $query = [
+            'page' => (int) ($this->request->getGet('page') ?? 1),
+            'per_page' => (int) ($this->request->getGet('per_page') ?? 20),
+            'sort_by' => (string) ($this->request->getGet('sort_by') ?? 'alias'),
+            'sort_dir' => strtolower((string) ($this->request->getGet('sort_dir') ?? 'asc')),
+            'q' => (string) ($this->request->getGet('q') ?? ''),
+            'motocicleta_id' => $this->request->getGet('motocicleta_id'),
+            'marca_id' => $this->request->getGet('marca_id'),
+        ];
+
+        $allowedSortBy = ['id', 'alias', 'motocicleta_id', 'moto_modelo', 'marca_nombre', 'created_at', 'updated_at'];
+        if (!in_array($query['sort_by'], $allowedSortBy, true)) {
+            return $this->respondValidationErrors([
+                'sort_by' => ['Valor no permitido.'],
+            ]);
+        }
+        if (!in_array($query['sort_dir'], ['asc', 'desc'], true)) {
+            return $this->respondValidationErrors([
+                'sort_dir' => ['Valor no permitido.'],
+            ]);
+        }
+        if ($query['motocicleta_id'] !== null && !is_numeric((string) $query['motocicleta_id'])) {
+            return $this->respondValidationErrors([
+                'motocicleta_id' => ['Valor no permitido.'],
+            ]);
+        }
+        if ($query['marca_id'] !== null && !is_numeric((string) $query['marca_id'])) {
+            return $this->respondValidationErrors([
+                'marca_id' => ['Valor no permitido.'],
+            ]);
+        }
+
+        return $this->respondSuccess($this->service->list($query), 'Listado de aliases obtenido.');
     }
 
     public function create(): ResponseInterface
@@ -40,13 +72,13 @@ class AliasesController extends BaseApiController
             return $this->respondError('Alias ya registrado.', ['alias' => ['duplicado']], ResponseInterface::HTTP_CONFLICT);
         }
 
-        $this->service->create([
+        $newId = $this->service->create([
             'motocicleta_id' => (int) $payload['motocicleta_id'],
             'alias' => $alias,
             'slug' => $this->service->makeSlug($alias),
         ]);
 
-        return $this->respondSuccess(['items' => $this->service->list()], 'Alias creado correctamente.', ResponseInterface::HTTP_CREATED);
+        return $this->respondSuccess($this->service->detailById($newId), 'Alias creado correctamente.', ResponseInterface::HTTP_CREATED);
     }
 
     public function update(int $id): ResponseInterface
@@ -83,6 +115,10 @@ class AliasesController extends BaseApiController
 
     public function delete(int $id): ResponseInterface
     {
+        if (!$this->service->find($id)) {
+            return $this->respondError('Alias no encontrado.', null, ResponseInterface::HTTP_NOT_FOUND);
+        }
+
         $this->service->delete($id);
 
         return $this->respondSuccess(null, 'Alias eliminado correctamente.');

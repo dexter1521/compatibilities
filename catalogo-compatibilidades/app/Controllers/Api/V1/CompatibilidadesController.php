@@ -19,7 +19,51 @@ class CompatibilidadesController extends BaseApiController
 
     public function index(): ResponseInterface
     {
-        return $this->respondSuccess(['items' => $this->service->list()], 'Listado de compatibilidades obtenido.');
+        $query = [
+            'page' => (int) ($this->request->getGet('page') ?? 1),
+            'per_page' => (int) ($this->request->getGet('per_page') ?? 20),
+            'sort_by' => (string) ($this->request->getGet('sort_by') ?? 'id'),
+            'sort_dir' => strtolower((string) ($this->request->getGet('sort_dir') ?? 'desc')),
+            'q' => (string) ($this->request->getGet('q') ?? ''),
+            'pieza_maestra_id' => $this->request->getGet('pieza_maestra_id'),
+            'motocicleta_id' => $this->request->getGet('motocicleta_id'),
+            'marca_id' => $this->request->getGet('marca_id'),
+            'confirmada' => $this->request->getGet('confirmada'),
+        ];
+
+        $allowedSortBy = ['id', 'pieza_nombre', 'moto_modelo', 'marca_nombre', 'confirmada', 'contador_confirmaciones', 'created_at', 'updated_at'];
+        if (!in_array($query['sort_by'], $allowedSortBy, true)) {
+            return $this->respondValidationErrors([
+                'sort_by' => ['Valor no permitido.'],
+            ]);
+        }
+        if (!in_array($query['sort_dir'], ['asc', 'desc'], true)) {
+            return $this->respondValidationErrors([
+                'sort_dir' => ['Valor no permitido.'],
+            ]);
+        }
+        if ($query['pieza_maestra_id'] !== null && !is_numeric((string) $query['pieza_maestra_id'])) {
+            return $this->respondValidationErrors([
+                'pieza_maestra_id' => ['Valor no permitido.'],
+            ]);
+        }
+        if ($query['motocicleta_id'] !== null && !is_numeric((string) $query['motocicleta_id'])) {
+            return $this->respondValidationErrors([
+                'motocicleta_id' => ['Valor no permitido.'],
+            ]);
+        }
+        if ($query['marca_id'] !== null && !is_numeric((string) $query['marca_id'])) {
+            return $this->respondValidationErrors([
+                'marca_id' => ['Valor no permitido.'],
+            ]);
+        }
+        if ($query['confirmada'] !== null && !in_array((string) $query['confirmada'], ['0', '1'], true)) {
+            return $this->respondValidationErrors([
+                'confirmada' => ['Valor no permitido.'],
+            ]);
+        }
+
+        return $this->respondSuccess($this->service->list($query), 'Listado de compatibilidades obtenido.');
     }
 
     public function show(int $id): ResponseInterface

@@ -19,7 +19,33 @@ class MotocicletasController extends BaseApiController
 
     public function index(): ResponseInterface
     {
-        return $this->respondSuccess(['items' => $this->service->list()], 'Listado de motocicletas obtenido.');
+        $query = [
+            'page' => (int) ($this->request->getGet('page') ?? 1),
+            'per_page' => (int) ($this->request->getGet('per_page') ?? 20),
+            'sort_by' => (string) ($this->request->getGet('sort_by') ?? 'id'),
+            'sort_dir' => strtolower((string) ($this->request->getGet('sort_dir') ?? 'desc')),
+            'q' => (string) ($this->request->getGet('q') ?? ''),
+            'marca_id' => $this->request->getGet('marca_id'),
+        ];
+
+        $allowedSortBy = ['id', 'modelo', 'marca_id', 'marca_nombre', 'anio_desde', 'anio_hasta', 'cilindrada', 'created_at', 'updated_at'];
+        if (!in_array($query['sort_by'], $allowedSortBy, true)) {
+            return $this->respondValidationErrors([
+                'sort_by' => ['Valor no permitido.'],
+            ]);
+        }
+        if (!in_array($query['sort_dir'], ['asc', 'desc'], true)) {
+            return $this->respondValidationErrors([
+                'sort_dir' => ['Valor no permitido.'],
+            ]);
+        }
+        if ($query['marca_id'] !== null && !is_numeric((string) $query['marca_id'])) {
+            return $this->respondValidationErrors([
+                'marca_id' => ['Valor no permitido.'],
+            ]);
+        }
+
+        return $this->respondSuccess($this->service->list($query), 'Listado de motocicletas obtenido.');
     }
 
     public function show(int $id): ResponseInterface
