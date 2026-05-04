@@ -30,7 +30,7 @@ class SearchController extends BaseApiController
 
         if ($term === '' || mb_strlen($term) < 2) {
             return $this->respondValidationErrors([
-                'q' => ['El tÃ©rmino debe contener al menos 2 caracteres.'],
+                'q' => ['El t�rmino debe contener al menos 2 caracteres.'],
             ]);
         }
 
@@ -47,7 +47,7 @@ class SearchController extends BaseApiController
 
         $results = $this->service->search($term, $limit, $page);
 
-        return $this->respondSuccess($results, 'BÃºsqueda completada.');
+        return $this->respondSuccess($results, 'B�squeda completada.');
     }
 
     public function missed(): ResponseInterface
@@ -72,7 +72,7 @@ class SearchController extends BaseApiController
             ]);
         }
 
-        return $this->respondSuccess($this->service->listSearchMissed($query), 'BÃºsquedas no encontradas obtenidas.');
+        return $this->respondSuccess($this->service->listSearchMissed($query), 'B�squedas no encontradas obtenidas.');
     }
 
     public function confirmarCompatibilidad(int $id): ResponseInterface
@@ -86,3 +86,4 @@ class SearchController extends BaseApiController
         return $this->respondSuccess($updated, 'Compatibilidad confirmada correctamente.');
     }
 }
+
