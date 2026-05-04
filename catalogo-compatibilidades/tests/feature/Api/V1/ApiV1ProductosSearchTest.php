@@ -98,6 +98,40 @@ final class ApiV1ProductosSearchTest extends TestCase
         $this->assertFalse((bool) ($response['json']['success'] ?? true));
     }
 
+    public function testSearchSuccessReturnsUniformMeta(): void
+    {
+        $token = $this->getAccessToken('admin@sharkmotors.local', 'Admin123!');
+
+        $response = $this->request('GET', '/api/v1/search?q=ft150&limit=5&page=1', null, [
+            'Authorization: Bearer ' . $token,
+        ]);
+
+        $this->assertSame(200, $response['status']);
+        $this->assertSame('Búsqueda completada.', $response['json']['message'] ?? '');
+        $this->assertArrayHasKey('items', $response['json']['data'] ?? []);
+        $this->assertArrayHasKey('meta', $response['json']['data'] ?? []);
+        $meta = $response['json']['data']['meta'];
+        $this->assertSame(1, $meta['page']);
+        $this->assertSame(5, $meta['per_page']);
+        $this->assertSame('relevancia', $meta['sort_by']);
+        $this->assertSame('desc', $meta['sort_dir']);
+        $this->assertArrayHasKey('timezone', $meta);
+        $this->assertArrayHasKey('filters', $meta);
+        $this->assertTrue(array_key_exists('q', $meta['filters']));
+    }
+
+    public function testSearchValidation422ByInvalidLimit(): void
+    {
+        $token = $this->getAccessToken('admin@sharkmotors.local', 'Admin123!');
+
+        $response = $this->request('GET', '/api/v1/search?q=balanceo&limit=999', null, [
+            'Authorization: Bearer ' . $token,
+        ]);
+
+        $this->assertSame(422, $response['status']);
+        $this->assertFalse((bool) ($response['json']['success'] ?? true));
+    }
+
     public function testSearchMissedForbiddenForVendedor(): void
     {
         $suffix = (string) time() . (string) random_int(100, 999);
@@ -113,6 +147,74 @@ final class ApiV1ProductosSearchTest extends TestCase
         ]);
 
         $this->assertSame(403, $response['status']);
+        $this->assertFalse((bool) ($response['json']['success'] ?? true));
+    }
+
+    public function testSearchMissedReturnsMetaAndSortValidation(): void
+    {
+        $token = $this->getAccessToken('admin@sharkmotors.local', 'Admin123!');
+
+        $response = $this->request('GET', '/api/v1/search-missed?page=1&per_page=10&sort_by=contador&sort_dir=asc', null, [
+            'Authorization: Bearer ' . $token,
+        ]);
+
+        $this->assertSame(200, $response['status']);
+        $this->assertArrayHasKey('items', $response['json']['data'] ?? []);
+        $this->assertArrayHasKey('meta', $response['json']['data'] ?? []);
+
+        $meta = $response['json']['data']['meta'];
+        $this->assertSame(1, $meta['page']);
+        $this->assertSame(10, $meta['per_page']);
+        $this->assertSame('contador', $meta['sort_by']);
+        $this->assertSame('asc', $meta['sort_dir']);
+
+        $badSort = $this->request('GET', '/api/v1/search-missed?sort_by=wrong', null, [
+            'Authorization: Bearer ' . $token,
+        ]);
+
+        $this->assertSame(422, $badSort['status']);
+        $this->assertFalse((bool) ($badSort['json']['success'] ?? true));
+    }
+
+    public function testImportProductosCsvReturnsJobResult(): void
+    {
+        $token = $this->getAccessToken('admin@sharkmotors.local', 'Admin123!');
+        $suffix = (string) time() . (string) random_int(100, 999);
+        $tmpFile = $this->buildSearchImportCsv($suffix);
+
+        try {
+            $response = $this->requestFile('POST', '/api/v1/import/productos', $tmpFile, [
+                'Authorization: Bearer ' . $token,
+            ]);
+
+            $this->assertSame(201, $response['status']);
+            $this->assertTrue((bool) ($response['json']['success'] ?? false));
+            $this->assertArrayHasKey('data', $response['json']);
+
+            $data = $response['json']['data'];
+            $this->assertSame(1, $data['total_items']);
+            $this->assertSame(1, $data['procesados']);
+            $this->assertSame(0, $data['errores']);
+            $this->assertSame('finalizado', $data['estado']);
+            $this->assertArrayHasKey('job_id', $data);
+            $this->assertIsInt((int) $data['job_id']);
+        } finally {
+            if (is_file($tmpFile)) {
+                @unlink($tmpFile);
+            }
+        }
+    }
+
+    public function testImportValidation422WithoutFileAndValidationCodes(): void
+    {
+        $token = $this->getAccessToken('admin@sharkmotors.local', 'Admin123!');
+
+        $response = $this->request('POST', '/api/v1/import/productos', null, [
+            'Authorization: Bearer ' . $token,
+            'Content-Type: application/json',
+        ]);
+
+        $this->assertSame(422, $response['status']);
         $this->assertFalse((bool) ($response['json']['success'] ?? true));
     }
 
@@ -244,5 +346,57 @@ final class ApiV1ProductosSearchTest extends TestCase
             'body' => $body,
             'json' => $json,
         ];
+    }
+
+    private function requestFile(string $method, string $path, string $filePath, array $headers = []): array
+    {
+        $ch = curl_init();
+
+        $payload = ['archivo' => new \CURLFile($filePath, 'text/csv')];
+
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $this->baseUrl . $path,
+            CURLOPT_CUSTOMREQUEST => $method,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => array_merge(['Accept: application/json'], $headers),
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_POSTFIELDS => $payload,
+        ]);
+
+        $body = curl_exec($ch);
+        $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+        if ($body === false) {
+            $error = curl_error($ch);
+            curl_close($ch);
+            $this->fail('Error CURL: ' . $error);
+        }
+
+        curl_close($ch);
+
+        $json = json_decode($body, true);
+        if (!is_array($json)) {
+            $json = null;
+        }
+
+        return [
+            'status' => $status,
+            'body' => $body,
+            'json' => $json,
+        ];
+    }
+
+    private function buildSearchImportCsv(string $suffix): string
+    {
+        $tmpFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'import_productos_' . $suffix . '.csv';
+        $content = implode(
+            "\n",
+            [
+                'proveedor,clave_proveedor,nombre',
+                "Prueba Import $suffix, CL-$suffix, Producto Import $suffix",
+            ]
+        );
+        file_put_contents($tmpFile, $content);
+        return $tmpFile;
     }
 }
