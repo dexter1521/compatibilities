@@ -176,6 +176,29 @@ final class ApiV1ProductosSearchTest extends TestCase
         $this->assertFalse((bool) ($badSort['json']['success'] ?? true));
     }
 
+    public function testSearchMissedReturns422ForInvalidPageAndPerPage(): void
+    {
+        $token = $this->getAccessToken('admin@sharkmotors.local', 'Admin123!');
+
+        $badPage = $this->request('GET', '/api/v1/search-missed?page=0', null, [
+            'Authorization: Bearer ' . $token,
+        ]);
+        $this->assertSame(422, $badPage['status']);
+        $this->assertFalse((bool) ($badPage['json']['success'] ?? true));
+
+        $badPerPage = $this->request('GET', '/api/v1/search-missed?per_page=0', null, [
+            'Authorization: Bearer ' . $token,
+        ]);
+        $this->assertSame(422, $badPerPage['status']);
+        $this->assertFalse((bool) ($badPerPage['json']['success'] ?? true));
+
+        $badPerPageHigh = $this->request('GET', '/api/v1/search-missed?per_page=201', null, [
+            'Authorization: Bearer ' . $token,
+        ]);
+        $this->assertSame(422, $badPerPageHigh['status']);
+        $this->assertFalse((bool) ($badPerPageHigh['json']['success'] ?? true));
+    }
+
     public function testImportProductosCsvReturnsJobResult(): void
     {
         $token = $this->getAccessToken('admin@sharkmotors.local', 'Admin123!');

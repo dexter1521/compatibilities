@@ -52,9 +52,12 @@ class SearchController extends BaseApiController
 
     public function missed(): ResponseInterface
     {
+        $page = (int) ($this->request->getGet('page') ?? 1);
+        $perPage = (int) ($this->request->getGet('per_page') ?? 50);
+
         $query = [
-            'page' => (int) ($this->request->getGet('page') ?? 1),
-            'per_page' => (int) ($this->request->getGet('per_page') ?? 50),
+            'page' => $page,
+            'per_page' => $perPage,
             'sort_by' => (string) ($this->request->getGet('sort_by') ?? 'contador'),
             'sort_dir' => strtolower((string) ($this->request->getGet('sort_dir') ?? 'desc')),
             'q' => (string) ($this->request->getGet('q') ?? ''),
@@ -69,6 +72,16 @@ class SearchController extends BaseApiController
         if (!in_array($query['sort_dir'], ['asc', 'desc'], true)) {
             return $this->respondValidationErrors([
                 'sort_dir' => ['Valor no permitido.'],
+            ]);
+        }
+        if ($page < 1) {
+            return $this->respondValidationErrors([
+                'page' => ['Debe ser mayor o igual a 1.'],
+            ]);
+        }
+        if ($perPage < 1 || $perPage > 200) {
+            return $this->respondValidationErrors([
+                'per_page' => ['Debe estar entre 1 y 200.'],
             ]);
         }
 
