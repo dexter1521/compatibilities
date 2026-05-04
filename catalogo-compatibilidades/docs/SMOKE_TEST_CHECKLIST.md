@@ -32,19 +32,20 @@
 2. Verificar `user_id` en logs para endpoints autenticados.
 
 ## 6) Documentación
-1. `GET /docs/openapi.yaml` responde archivo.
+1. `GET /api/openapi.yaml` responde archivo. (`/docs/openapi.yaml` también responde por compatibilidad).
 2. `GET /docs/api` renderiza Swagger UI.
 3. Operaciones críticas presentes en OpenAPI (`auth`, `productos`, `search`, `compatibilidades`).
 
 ## 7) Criterio de salida
 - Todas las pruebas anteriores en verde sin errores 500.
 - Contratos JSON (`status/success/data/message/errors`) consistentes.
-## 8) SPA /app (end to end basico)
-Estas pruebas se hacen con navegador y sesion activa.
+
+## 8) SPA /app (end to end básico)
+Estas pruebas se hacen con navegador y sesión activa.
 
 1. Acceder a `http://localhost:8080/app`.
 2. Login con usuario admin (debe redirigir al dashboard).
-3. Validar navegacion visible en:
+3. Validar navegación visible en:
    - Buscador
    - Productos
    - Motos
@@ -52,16 +53,16 @@ Estas pruebas se hacen con navegador y sesion activa.
    - Compatibilidades
    - Aliases
    - Import
-4. En cada modulo, validar:
+4. En cada módulo, validar:
    - Listado carga sin error 500.
    - El operador puede crear un registro.
    - El operador puede editar un registro en la fila (editar/guardar/cancelar).
    - El operador puede eliminar un registro.
-   - En productos, validar filtros basicos y paginacion.
+   - En productos, validar filtros básicos y paginación.
 5. Verificar sidebar en ancho de tablet y mobile:
-   - Boton menu visible en mobile.
+   - Botón menú visible en mobile.
    - Tabla con scroll horizontal.
-   - Botones accion no se montan sobre celdas.
+   - Botones acción no se montan sobre celdas.
 6. En consola del navegador:
    - No errores JS.
    - No request 4xx/5xx fuera de casos esperados.

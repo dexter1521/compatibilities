@@ -8,21 +8,21 @@ Se consolidó la API v1 con contratos estables y pruebas de integración, y se i
 
 ## Estado Actual
 - API REST v1 funcional con JWT, RBAC, rate limit y auditoría.
-- Contrato OpenAPI actualizado (`docs/openapi.yaml`).
+- Contrato OpenAPI actualizado (`openapi/openapi.yaml`).
 - Suite de pruebas API en Docker pasando:
   - 12 tests
   - 61 assertions
 - Front legacy depurado:
-  - limpieza de `app/Views/layouts/fiva.php`
-  - reducción de `public/fiva-assets/js/custom.js` a funciones usadas
+  - Limpieza de `app/Views/layouts/fiva.php`
+  - Reducción de `public/fiva-assets/js/custom.js` a funciones usadas
 - SPA base creada en `frontend/`:
   - Vue 3 + Vite + Pinia + Vue Router + Axios
-  - login JWT, refresh y logout
-  - shell responsive inicial (sidebar/topbar)
-  - vista de buscador conectada a `/api/v1/search`
-- Integración CI4 ↔ SPA:
-  - host web en `/app` y fallback `/app/*`
-  - build de Vite publicado en `public/spa`
+  - Login JWT, refresh y logout
+  - Shell responsive inicial (sidebar/topbar)
+  - Vista de buscador conectada a `/api/v1/search`
+- Integración CI4 <-> SPA:
+  - Host web en `/app` y fallback `/app/*`
+  - Build de Vite publicado en `public/spa`
 
 ## Commits Relevantes
 - `c22ee41`: inicio SPA + eliminación de artefactos de prueba legacy
@@ -31,7 +31,7 @@ Se consolidó la API v1 con contratos estables y pruebas de integración, y se i
 ## Rutas Clave
 - Legacy server-rendered: `/`
 - API docs: `/docs/api`
-- OpenAPI: `/docs/openapi.yaml`
+- OpenAPI: `/api/openapi.yaml` (canónico, `/docs/openapi.yaml` como alias)
 - SPA interna: `/app`
 - API v1 base: `/api/v1/*`
 
@@ -50,14 +50,14 @@ Se consolidó la API v1 con contratos estables y pruebas de integración, y se i
 ## Decisiones Técnicas Tomadas
 - Se mantiene CodeIgniter 4 como backend principal (sin migrar framework).
 - Se adopta estrategia híbrida:
-  - corto plazo: conviven vistas legacy y SPA
-  - mediano plazo: migración gradual de módulos a SPA
+  - Corto plazo: conviven vistas legacy y SPA
+  - Mediano plazo: migración gradual de módulos a SPA
 - Se priorizó una SPA interna (no SSR) por contexto operativo de mostrador y panel interno.
 
 ## Pendientes Inmediatos
-- Cierre de migraci�n SPA completado para m�dulos funcionales principales.
-- Mantener documentaci�n de despliegue frontend y procedimiento de release versionado de `public/spa`.
-- Consolidar men� de roles (fase de ajuste menor para permisos.)
+- Cierre de migración SPA completado para módulos funcionales principales.
+- Mantener documentación de despliegue frontend y procedimiento de release versionado de `public/spa`.
+- Consolidar menú de roles (fase de ajuste menor para permisos.)
 
 ## Riesgos Abiertos
 - Convivencia temporal legacy + SPA puede duplicar flujos hasta completar migración.
@@ -65,21 +65,14 @@ Se consolidó la API v1 con contratos estables y pruebas de integración, y se i
 
 ## Criterio de Cierre de Fase
 Esta fase se considera cerrada cuando:
-- todos los módulos operativos estén en SPA,
-- legacy quede en modo mantenimiento,
-- y se ejecute smoke test integral sobre `/app` con API v1.
+- Todos los módulos operativos estén en SPA,
+- Legacy quede en modo mantenimiento,
+- Y se ejecute smoke test integral sobre `/app` con API v1.
 
-
-- 2026-05-03: Se agreg� edici�n inline en m�dulo SPA de Productos (PUT `/api/v1/productos/{id}`), con edici�n r�pida de clave, nombre y estado, y flujo Guardar/Cancelar.
-
-- 2026-05-03: Extendida la migraci�n SPA con edici�n inline en m�dulos de `motocicletas` y `compatibilidades` (`PUT /api/v1/motocicletas/{id}` y `PUT /api/v1/compatibilidades/{id}`).
-- 2026-05-03: Se complet� edici�n inline en SPA para `piezas` y `aliases` (PUT `/api/v1/piezas/{id}`, PUT `/api/v1/aliases/{id}`), con acciones Editar/Guardar/Cancelar.
-
-- 2026-05-03: Migraci�n SPA de m�dulos CRUD finalizada (productos, motocicletas, piezas, compatibilidades, aliases) con edici�n inline y flujo completo de alta/editar/baja (create, PUT, delete) para uso operativo interno.
-
-
-
-- 2026-05-03: Se agrego el endpoint PUT /api/v1/aliases/{id} en API v1 para alinear con el cliente SPA (ruta, controller y servicio) y se actualizo openapi.yaml.
-
-- 2026-05-03: Fase de migracion SPA de operacion interna marcada como CERRADA. Criterios: modulos migrados a SPA con alta/edicion/baja por API, contrato v1 estable para alias PUT, y cobertura documental abierta para pruebas de smoke/test de /app.
-- 2026-05-03: Se formalizo checklist de smoke test completo para /app (API+UI) en docs/SMOKE_TEST_CHECKLIST.md, incluyendo navegacion por mÃ³dulos y escenarios desktop/mobile.
+- 2026-05-03: Se agregó edición inline en módulo SPA de Productos (PUT `/api/v1/productos/{id}`), con edición rápida de clave, nombre y estado, y flujo Guardar/Cancelar.
+- 2026-05-03: Extendida la migración SPA con edición inline en módulos de `motocicletas` y `compatibilidades` (`PUT /api/v1/motocicletas/{id}` y `PUT /api/v1/compatibilidades/{id}`).
+- 2026-05-03: Se completó edición inline en SPA para `piezas` y `aliases` (PUT `/api/v1/piezas/{id}`, PUT `/api/v1/aliases/{id}`), con acciones Editar/Guardar/Cancelar.
+- 2026-05-03: Migración SPA de módulos CRUD finalizada (productos, motocicletas, piezas, compatibilidades, aliases) con edición inline y flujo completo de alta/editar/baja (create, PUT, delete) para uso operativo interno.
+- 2026-05-03: Se agregó el endpoint PUT /api/v1/aliases/{id} en API v1 para alinear con el cliente SPA (ruta, controller y servicio) y se actualizó openapi.yaml.
+- 2026-05-03: Fase de migración SPA de operación interna marcada como CERRADA. Criterios: módulos migrados a SPA con alta/edición/baja por API, contrato v1 estable para alias PUT, y cobertura documental abierta para pruebas de smoke/test de /app.
+- 2026-05-03: Se formalizó checklist de smoke test completo para /app (API+UI) en `docs/SMOKE_TEST_CHECKLIST.md`, incluyendo navegación por módulos y escenarios desktop/mobile.
