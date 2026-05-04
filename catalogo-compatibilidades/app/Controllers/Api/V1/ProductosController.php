@@ -42,6 +42,21 @@ class ProductosController extends BaseApiController
                 'sort_dir' => ['Valor no permitido.'],
             ]);
         }
+        if ($query['proveedor_id'] !== null && !is_numeric((string) $query['proveedor_id'])) {
+            return $this->respondValidationErrors([
+                'proveedor_id' => ['Valor no permitido.'],
+            ]);
+        }
+        if ($query['pieza_maestra_id'] !== null && !is_numeric((string) $query['pieza_maestra_id'])) {
+            return $this->respondValidationErrors([
+                'pieza_maestra_id' => ['Valor no permitido.'],
+            ]);
+        }
+        if ($query['activo'] !== null && !in_array((string) $query['activo'], ['0', '1'], true)) {
+            return $this->respondValidationErrors([
+                'activo' => ['Valor no permitido.'],
+            ]);
+        }
 
         $allowedEnrich = [null, '', 'ok', 'sin_tipo', 'sin_moto', 'sin_ambos'];
         if (!in_array($query['enrich_estado'], $allowedEnrich, true)) {

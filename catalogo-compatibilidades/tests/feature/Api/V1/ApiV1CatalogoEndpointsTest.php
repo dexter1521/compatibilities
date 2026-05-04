@@ -199,6 +199,31 @@ final class ApiV1CatalogoEndpointsTest extends TestCase
         $this->assertSame(422, $response['status']);
     }
 
+    public function testProductosListValidation422ForInvalidFilters(): void
+    {
+        $token = $this->getAccessToken('admin@sharkmotors.local', 'Admin123!');
+
+        $badProveedor = $this->request('GET', '/api/v1/productos?proveedor_id=abc', null, [
+            'Authorization: Bearer ' . $token,
+        ]);
+        $this->assertSame(422, $badProveedor['status']);
+
+        $badPieza = $this->request('GET', '/api/v1/productos?pieza_maestra_id=xx', null, [
+            'Authorization: Bearer ' . $token,
+        ]);
+        $this->assertSame(422, $badPieza['status']);
+
+        $badActivo = $this->request('GET', '/api/v1/productos?activo=2', null, [
+            'Authorization: Bearer ' . $token,
+        ]);
+        $this->assertSame(422, $badActivo['status']);
+
+        $ok = $this->request('GET', '/api/v1/productos?enrich_estado=sin_tipo', null, [
+            'Authorization: Bearer ' . $token,
+        ]);
+        $this->assertSame(200, $ok['status']);
+    }
+
     private function createMarca(string $nombre, string $slug): int
     {
         $stmt = $this->db->prepare('INSERT INTO marcas (nombre, slug, activo, created_at, updated_at) VALUES (?, ?, 1, NOW(), NOW())');
