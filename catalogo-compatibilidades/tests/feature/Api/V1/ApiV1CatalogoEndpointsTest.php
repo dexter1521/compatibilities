@@ -224,6 +224,62 @@ final class ApiV1CatalogoEndpointsTest extends TestCase
         $this->assertSame(200, $ok['status']);
     }
 
+    public function testIndexesValidation422ForPageAndPerPage(): void
+    {
+        $token = $this->getAccessToken('admin@sharkmotors.local', 'Admin123!');
+
+        $invalidPageEndpoints = [
+            '/api/v1/marcas?page=0',
+            '/api/v1/motocicletas?page=0',
+            '/api/v1/piezas?page=0',
+            '/api/v1/aliases?page=0',
+            '/api/v1/compatibilidades?page=0',
+            '/api/v1/productos?page=0',
+        ];
+
+        foreach ($invalidPageEndpoints as $path) {
+            $response = $this->request('GET', $path, null, [
+                'Authorization: Bearer ' . $token,
+            ]);
+            $this->assertSame(422, $response['status'], "Expected 422 for invalid page in {$path}");
+            $this->assertFalse((bool) ($response['json']['success'] ?? true));
+        }
+
+        $invalidPerPageEndpoints = [
+            '/api/v1/marcas?per_page=0',
+            '/api/v1/motocicletas?per_page=0',
+            '/api/v1/piezas?per_page=0',
+            '/api/v1/aliases?per_page=0',
+            '/api/v1/compatibilidades?per_page=0',
+            '/api/v1/productos?per_page=0',
+        ];
+
+        foreach ($invalidPerPageEndpoints as $path) {
+            $response = $this->request('GET', $path, null, [
+                'Authorization: Bearer ' . $token,
+            ]);
+            $this->assertSame(422, $response['status'], "Expected 422 for invalid per_page in {$path}");
+            $this->assertFalse((bool) ($response['json']['success'] ?? true));
+        }
+
+        $invalidPerPageMaxEndpoints = [
+            '/api/v1/marcas?per_page=101',
+            '/api/v1/motocicletas?per_page=101',
+            '/api/v1/piezas?per_page=101',
+            '/api/v1/aliases?per_page=101',
+            '/api/v1/compatibilidades?per_page=101',
+            '/api/v1/productos?per_page=101',
+        ];
+
+        foreach ($invalidPerPageMaxEndpoints as $path) {
+            $response = $this->request('GET', $path, null, [
+                'Authorization: Bearer ' . $token,
+            ]);
+            $this->assertSame(422, $response['status'], "Expected 422 for too large per_page in {$path}");
+            $this->assertFalse((bool) ($response['json']['success'] ?? true));
+        }
+    }
+
     private function createMarca(string $nombre, string $slug): int
     {
         $stmt = $this->db->prepare('INSERT INTO marcas (nombre, slug, activo, created_at, updated_at) VALUES (?, ?, 1, NOW(), NOW())');
