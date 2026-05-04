@@ -86,16 +86,7 @@ final class ApiV1CatalogoEndpointsTest extends TestCase
         ], ['Authorization: Bearer ' . $adminToken]);
         $this->assertSame(201, $aliasCreate['status']);
 
-        $aliasItems = $aliasCreate['json']['data']['items'] ?? [];
-        $aliasId = 0;
-        if (is_array($aliasItems)) {
-            foreach ($aliasItems as $item) {
-                if ((int) ($item['motocicleta_id'] ?? 0) === $motoId && (string) ($item['alias'] ?? '') === 'Alias ' . $suffix) {
-                    $aliasId = (int) ($item['id'] ?? 0);
-                    break;
-                }
-            }
-        }
+        $aliasId = (int) ($aliasCreate['json']['data']['id'] ?? 0);
         $this->assertGreaterThan(0, $aliasId);
 
         $compatCreate = $this->request('POST', '/api/v1/compatibilidades', [
