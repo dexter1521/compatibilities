@@ -268,6 +268,18 @@ class SearchModel extends Model
         }
 
         $safe = '%' . $q . '%';
+        $safeNormalized = [];
+        foreach ($this->getNormalizedModelSearchTokens($q) as $token) {
+            $safeNormalized[] = '%' . $token . '%';
+        }
+
+        $normalizedWhere = [];
+        $normalizedBindings = [];
+        foreach ($safeNormalized as $tokenSafe) {
+            $normalizedWhere[] = $this->buildNormalizedAliasExpression() . ' LIKE ?';
+            $normalizedBindings[] = $tokenSafe;
+        }
+        $normalizedWhereSql = $normalizedWhere === [] ? '' : (' OR ' . implode(' OR ', $normalizedWhere));
 
         $rows = $this->db->query(
             '
@@ -296,16 +308,19 @@ class SearchModel extends Model
             LEFT JOIN compatibilidades c ON c.pieza_maestra_id = p.pieza_maestra_id
             LEFT JOIN motocicletas mo ON mo.id = c.motocicleta_id
             LEFT JOIN marcas ma ON ma.id = mo.marca_id
+            LEFT JOIN alias_motos am ON am.motocicleta_id = mo.id
             WHERE p.activo = 1
               AND (
                    p.clave_proveedor LIKE ?
                 OR p.nombre LIKE ?
                 OR pr.nombre LIKE ?
+                OR am.alias LIKE ?
+                OR UPPER(am.alias) LIKE ?{$normalizedWhereSql}
               )
             ORDER BY p.clave_proveedor, ma.nombre, mo.modelo
             LIMIT 300
             ',
-            [$safe, $safe, $safe]
+            array_merge([$safe, $safe, $safe, $safe, $safe], $normalizedBindings)
         )->getResultArray();
 
         $results = [];
