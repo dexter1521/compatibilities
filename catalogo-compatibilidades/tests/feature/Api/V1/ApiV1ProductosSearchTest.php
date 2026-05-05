@@ -313,7 +313,7 @@ final class ApiV1ProductosSearchTest extends TestCase
         ]);
         $this->assertSame(201, $compatCreate['status']);
 
-        $variants = ['CS-125', 'CS 125'];
+        $variants = ['CS-125', 'CS 125', '125 CS', '125-CS', '125CS'];
         foreach ($variants as $query) {
             $searchMoto = $this->request('GET', '/api/v1/search/moto?q=' . urlencode($query) . '&per_page=10', null, [
                 'Authorization: Bearer ' . $token,

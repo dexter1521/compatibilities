@@ -165,7 +165,22 @@ class SearchModel extends Model
         }
 
         $safe = '%' . $q . '%';
-        $safeNormalized = '%' . $this->normalizeModelSearchToken($q) . '%';
+        $normalizedTokens = $this->getNormalizedModelSearchTokens($q);
+        $safeNormalized = [];
+        foreach ($normalizedTokens as $token) {
+            $safeNormalized[] = '%' . $token . '%';
+        }
+
+        $normalizedWhere = [];
+        $normalizedBindings = [];
+        foreach ($safeNormalized as $tokenSafe) {
+            $normalizedWhere[] = "UPPER(REPLACE(REPLACE(m.modelo, ' ', ''), '-', '')) LIKE ?";
+            $normalizedWhere[] = "UPPER(REPLACE(REPLACE(am.alias, ' ', ''), '-', '')) LIKE ?";
+            $normalizedBindings[] = $tokenSafe;
+            $normalizedBindings[] = $tokenSafe;
+        }
+
+        $normalizedWhereSql = $normalizedWhere === [] ? '' : (' OR ' . implode(' OR ', $normalizedWhere));
 
         $rows = $this->db->query(
             "
@@ -183,12 +198,12 @@ class SearchModel extends Model
             WHERE m.modelo LIKE ?
                OR ma.nombre LIKE ?
                OR am.alias LIKE ?
-               OR UPPER(REPLACE(REPLACE(m.modelo, ' ', ''), '-', '')) LIKE ?
-               OR UPPER(REPLACE(REPLACE(am.alias, ' ', ''), '-', '')) LIKE ?
+               OR UPPER(ma.nombre) LIKE ?
+               OR UPPER(am.alias) LIKE ?{$normalizedWhereSql}
             ORDER BY ma.nombre, m.modelo
             LIMIT 100
             ",
-            [$safe, $safe, $safe, $safeNormalized, $safeNormalized]
+            array_merge([$safe, $safe, $safe, $safe, $safe], $normalizedBindings)
         )->getResultArray();
 
         return array_map(function (array $row): array {
@@ -479,5 +494,34 @@ class SearchModel extends Model
         $normalized = str_replace([' ', '-'], '', $normalized);
 
         return $normalized;
+    }
+
+    /**
+     * Devuelve variantes normalizadas para búsqueda flexible de modelos de moto.
+     * Incluye la forma alfabético-número y número-alfabético para cubrir casos
+     * como "DS125", "CS-125", "125 CS".
+     *
+     * @return string[]
+     */
+    private function getNormalizedModelSearchTokens(string $term): array
+    {
+        $normalized = $this->normalizeModelSearchToken($term);
+        if ($normalized === '') {
+            return [];
+        }
+
+        $tokens = [$normalized];
+
+        if (preg_match('/[A-Z]/', $normalized) && preg_match('/\d/', $normalized)) {
+            $parts = preg_split('/(?:(?=[A-Z])(?<=\d)|(?<=[A-Z])(?=\d))/', $normalized);
+            $parts = array_values(array_filter($parts, 'strlen'));
+
+            if (count($parts) === 2 && ($parts[0] !== $parts[1])) {
+                $reversed = $parts[1] . $parts[0];
+                $tokens[] = $reversed;
+            }
+        }
+
+        return array_values(array_unique($tokens));
     }
 }
