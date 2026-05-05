@@ -528,7 +528,7 @@ class SearchModel extends Model
 
     private function buildNormalizedColumnExpression(string $column): string
     {
-        return "UPPER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE({$column}, ' ', ''), '-', ''), '.', ''), '/', ''), '_', ''))";
+        return "UPPER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE({$column}, ' ', ''), '-', ''), '.', ''), '/', ''), '_', ''))";
     }
 
     private function buildNormalizedAliasExpression(): string
