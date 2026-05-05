@@ -282,7 +282,7 @@ class SearchModel extends Model
         $normalizedWhereSql = $normalizedWhere === [] ? '' : (' OR ' . implode(' OR ', $normalizedWhere));
 
         $rows = $this->db->query(
-            '
+            "
             SELECT
                 p.id AS producto_id,
                 p.clave_proveedor,
@@ -319,7 +319,7 @@ class SearchModel extends Model
               )
             ORDER BY p.clave_proveedor, ma.nombre, mo.modelo
             LIMIT 300
-            ',
+            ",
             array_merge([$safe, $safe, $safe, $safe, $safe], $normalizedBindings)
         )->getResultArray();
 

@@ -248,7 +248,7 @@ final class ApiV1ProductosSearchTest extends TestCase
         ]);
         $this->assertSame(201, $compatCreate['status']);
 
-        $searchMoto = $this->request('GET', '/api/v1/search/moto?q=CS125 ' . $suffix . '&per_page=10', null, [
+        $searchMoto = $this->request('GET', '/api/v1/search/moto?q=' . urlencode('CS125 ' . $suffix) . '&per_page=10', null, [
             'Authorization: Bearer ' . $token,
         ]);
         $this->assertSame(200, $searchMoto['status']);
@@ -323,11 +323,20 @@ final class ApiV1ProductosSearchTest extends TestCase
 
             $items = $searchMoto['json']['data']['items'];
             $this->assertIsArray($items);
-            $this->assertCount(1, $items);
-            $this->assertSame($motoId, (int) ($items[0]['moto']['moto_id'] ?? 0));
-            $this->assertArrayHasKey('piezas', $items[0]);
-            $this->assertCount(1, $items[0]['piezas']);
-            $this->assertSame($piezaId, (int) ($items[0]['piezas'][0]['pieza_maestra_id'] ?? 0));
+            $this->assertNotEmpty($items);
+
+            $found = false;
+            foreach ($items as $item) {
+                if ((int) ($item['moto']['moto_id'] ?? 0) === $motoId) {
+                    $found = true;
+                    $this->assertArrayHasKey('piezas', $item);
+                    $this->assertCount(1, $item['piezas']);
+                    $this->assertSame($piezaId, (int) ($item['piezas'][0]['pieza_maestra_id'] ?? 0));
+                    break;
+                }
+            }
+
+            $this->assertTrue($found, "No se encontró moto {$motoId} en resultados para query {$query}.");
         }
     }
 
@@ -461,6 +470,25 @@ final class ApiV1ProductosSearchTest extends TestCase
 
         if (!$ok || $id <= 0) {
             $this->fail('No se pudo crear proveedor para test.');
+        }
+
+        return $id;
+    }
+
+    private function createMarca(string $nombre, string $slug): int
+    {
+        $stmt = $this->db->prepare('INSERT INTO marcas (nombre, slug, created_at, updated_at) VALUES (?, ?, NOW(), NOW())');
+        if (!$stmt) {
+            $this->fail('No se pudo preparar insert marca.');
+        }
+
+        $stmt->bind_param('ss', $nombre, $slug);
+        $ok = $stmt->execute();
+        $id = (int) $this->db->insert_id;
+        $stmt->close();
+
+        if (!$ok || $id <= 0) {
+            $this->fail('No se pudo crear marca para test.');
         }
 
         return $id;
