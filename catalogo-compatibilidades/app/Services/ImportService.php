@@ -39,54 +39,6 @@ class ImportService
         'cs', 'dsg', 'gts', 'xft', 'dsr', 'rt', 'sz', 'gl',
     ];
 
-    /** Mapa de fallback: modelo detectado -> marca canónica para procesamiento de lotes pendientes. */
-    private const MAPA_MODELO_MARCA_AUTO = [
-        'CS125'  => 'ITALIKA',
-        'DS125'  => 'ITALIKA',
-        'DS150'  => 'ITALIKA',
-        'DSG125' => 'ITALIKA',
-        'FT110'  => 'ITALIKA',
-        'FT115'  => 'ITALIKA',
-        'FT116'  => 'ITALIKA',
-        'FT180'  => 'ITALIKA',
-        'FT200'  => 'ITALIKA',
-        'FT250'  => 'ITALIKA',
-        'FT125'  => 'ITALIKA',
-        'XFT125' => 'ITALIKA',
-        'DT125'  => 'ITALIKA',
-        'DT150'  => 'ITALIKA',
-        'DM125'  => 'ITALIKA',
-        'DM150'  => 'ITALIKA',
-        'DM250'  => 'ITALIKA',
-        'RT180'  => 'ITALIKA',
-        'RT200'  => 'ITALIKA',
-        'RT250'  => 'ITALIKA',
-        'NS150'  => 'BAJAJ',
-        'NS160'  => 'BAJAJ',
-        'NS200'  => 'BAJAJ',
-        'RS200'  => 'BAJAJ',
-        'GTS175' => 'VENTO',
-        'GTS300' => 'VENTO',
-        'WS175'  => 'VENTO',
-        'YBR125' => 'YAMAHA',
-        'FZ16'   => 'YAMAHA',
-        'FZ250'  => 'YAMAHA',
-        'SZ250'  => 'ITALIKA',
-        'EN125'  => 'SUZUKI',
-        'EN150'  => 'SUZUKI',
-        'GN125'  => 'SUZUKI',
-        'GL150'  => 'HONDA',
-        'WS150'  => 'ITALIKA',
-        'RC125'  => 'HONDA',
-        'RC150'  => 'HONDA',
-        'RC200'  => 'HONDA',
-        'RC250'  => 'HONDA',
-        'RC390'  => 'KTM',
-        'AT110'  => 'HONDA',
-        'CG125'  => 'HONDA',
-        'BWS100' => 'YAMAHA',
-    ];
-
     private array $mapTipos = [
         'Filtro de Aceite'      => ['FILTRO DE ACEITE'],
         'Filtro de Aire'        => ['FILTRO DE AIRE', 'FILTRO AIRE'],
@@ -737,11 +689,6 @@ class ImportService
      */
     private function resolverMarcaModelo(string $modeloTextoDetectado, array $nombres, array $brandByName): ?string
     {
-        $modelo = strtoupper(trim($modeloTextoDetectado));
-        if ($modelo !== '' && isset(self::MAPA_MODELO_MARCA_AUTO[$modelo])) {
-            return self::MAPA_MODELO_MARCA_AUTO[$modelo];
-        }
-
         foreach ($nombres as $nombreProducto) {
             if (isset($brandByName[$nombreProducto]) && $brandByName[$nombreProducto] !== '') {
                 return mb_strtoupper(trim((string) $brandByName[$nombreProducto]));

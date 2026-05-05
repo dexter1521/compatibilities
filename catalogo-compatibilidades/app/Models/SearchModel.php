@@ -34,6 +34,17 @@ class SearchModel extends Model
         }
 
         $safe = '%' . $q . '%';
+        $safeNormalized = array_map(
+            static fn(string $token): string => '%' . $token . '%',
+            $this->getNormalizedModelSearchTokens($q)
+        );
+
+        $normalizedWhere = [];
+        foreach ($safeNormalized as $tokenSafe) {
+            $normalizedWhere[] = $this->buildNormalizedAliasExpression() . ' LIKE ?';
+        }
+        $normalizedWhereSql = $normalizedWhere === [] ? '' : (' OR ' . implode(' OR ', $normalizedWhere));
+
 
         // Step 1: resolve distinct pieza_maestra IDs que coincidan con el término
         $sql1 = "
@@ -46,10 +57,14 @@ class SearchModel extends Model
                OR p.clave_proveedor LIKE ?
                OR p.nombre LIKE ?
                OR am.alias LIKE ?
+               OR UPPER(am.alias) LIKE ?{$normalizedWhereSql}
             LIMIT 50
         ";
 
-        $piezaRows = $this->db->query($sql1, [$safe, $safe, $safe, $safe])->getResultArray();
+        $piezaRows = $this->db->query(
+            $sql1,
+            array_merge([$safe, $safe, $safe, $safe, $safe], $safeNormalized)
+        )->getResultArray();
         $piezaIds  = array_column($piezaRows, 'pieza_maestra_id');
 
         if (empty($piezaIds)) {
@@ -174,8 +189,8 @@ class SearchModel extends Model
         $normalizedWhere = [];
         $normalizedBindings = [];
         foreach ($safeNormalized as $tokenSafe) {
-            $normalizedWhere[] = "UPPER(REPLACE(REPLACE(m.modelo, ' ', ''), '-', '')) LIKE ?";
-            $normalizedWhere[] = "UPPER(REPLACE(REPLACE(am.alias, ' ', ''), '-', '')) LIKE ?";
+            $normalizedWhere[] = $this->buildNormalizedColumnExpression('m.modelo') . ' LIKE ?';
+            $normalizedWhere[] = $this->buildNormalizedColumnExpression('am.alias') . ' LIKE ?';
             $normalizedBindings[] = $tokenSafe;
             $normalizedBindings[] = $tokenSafe;
         }
@@ -491,9 +506,19 @@ class SearchModel extends Model
     private function normalizeModelSearchToken(string $term): string
     {
         $normalized = mb_strtoupper(trim($term), 'UTF-8');
-        $normalized = str_replace([' ', '-'], '', $normalized);
+        $normalized = preg_replace('/[^A-Z0-9]/', '', $normalized) ?: '';
 
         return $normalized;
+    }
+
+    private function buildNormalizedColumnExpression(string $column): string
+    {
+        return "UPPER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE({$column}, ' ', ''), '-', ''), '.', ''), '/', ''), '_', ''))";
+    }
+
+    private function buildNormalizedAliasExpression(): string
+    {
+        return $this->buildNormalizedColumnExpression('am.alias');
     }
 
     /**
@@ -525,3 +550,4 @@ class SearchModel extends Model
         return array_values(array_unique($tokens));
     }
 }
+
