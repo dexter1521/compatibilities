@@ -57,6 +57,78 @@ class SearchApiService
         ];
     }
 
+    public function searchMoto(string $term, int $limit = 50, int $page = 1): array
+    {
+        $page = max(1, $page);
+        $limit = max(1, min($limit, 50));
+        $offset = ($page - 1) * $limit;
+
+        $motos = $this->searchModel->searchMotosByTerm($term);
+        $total = count($motos);
+
+        $items = array_map(
+            static function (array $moto): array {
+                return [
+                    'moto' => $moto,
+                    'piezas' => [],
+                ];
+            },
+            array_slice($motos, $offset, $limit)
+        );
+
+        $motoSlice = array_slice($motos, $offset, $limit);
+        foreach ($motoSlice as $index => $moto) {
+            $piezas = $this->searchModel->searchByMoto((int) $moto['moto_id']);
+            $items[$index]['piezas'] = $piezas;
+        }
+
+        return [
+            'items' => $items,
+            'meta' => [
+                'page' => $page,
+                'per_page' => $limit,
+                'total' => $total,
+                'last_page' => (int) ceil($total / $limit),
+                'sort_by' => 'relevancia',
+                'sort_dir' => 'desc',
+                'filters' => [
+                    'q' => $term !== '' ? $term : null,
+                    'tipo' => 'moto',
+                ],
+                'timezone' => $this->timezone,
+            ],
+        ];
+    }
+
+    public function searchProducto(string $term, int $limit = 50, int $page = 1): array
+    {
+        $page = max(1, $page);
+        $limit = max(1, min($limit, 50));
+
+        $allItems = $this->searchModel->searchProductosPorTermino($term);
+        $total = count($allItems);
+        $offset = ($page - 1) * $limit;
+
+        $items = array_slice($allItems, $offset, $limit);
+
+        return [
+            'items' => $items,
+            'meta' => [
+                'page' => $page,
+                'per_page' => $limit,
+                'total' => $total,
+                'last_page' => (int) ceil($total / $limit),
+                'sort_by' => 'relevancia',
+                'sort_dir' => 'desc',
+                'filters' => [
+                    'q' => $term !== '' ? $term : null,
+                    'tipo' => 'producto',
+                ],
+                'timezone' => $this->timezone,
+            ],
+        ];
+    }
+
     public function confirmCompatibilidad(int $id): ?array
     {
         $this->db->transStart();

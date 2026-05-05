@@ -145,6 +145,185 @@ class SearchModel extends Model
     }
 
     /**
+     * Busca motos por término (marca, modelo o alias).
+     *
+     * @return array<int, array{
+     *   moto_id: int,
+     *   modelo: string,
+     *   anio_desde: int|null,
+     *   anio_hasta: int|null,
+     *   cilindrada: string|null,
+     *   marca_id: int|null,
+     *   marca_nombre: string|null
+     * }>
+     */
+    public function searchMotosByTerm(string $q): array
+    {
+        $q = trim($q);
+        if ($q === '' || mb_strlen($q) < 2) {
+            return [];
+        }
+
+        $safe = '%' . $q . '%';
+        $safeNormalized = '%' . $this->normalizeModelSearchToken($q) . '%';
+
+        $rows = $this->db->query(
+            "
+            SELECT DISTINCT
+                m.id AS moto_id,
+                m.modelo,
+                m.anio_desde,
+                m.anio_hasta,
+                m.cilindrada,
+                m.marca_id,
+                ma.nombre AS marca_nombre
+            FROM motocicletas m
+            LEFT JOIN marcas ma ON ma.id = m.marca_id
+            LEFT JOIN alias_motos am ON am.motocicleta_id = m.id
+            WHERE m.modelo LIKE ?
+               OR ma.nombre LIKE ?
+               OR am.alias LIKE ?
+               OR UPPER(REPLACE(REPLACE(m.modelo, ' ', ''), '-', '')) LIKE ?
+               OR UPPER(REPLACE(REPLACE(am.alias, ' ', ''), '-', '')) LIKE ?
+            ORDER BY ma.nombre, m.modelo
+            LIMIT 100
+            ",
+            [$safe, $safe, $safe, $safeNormalized, $safeNormalized]
+        )->getResultArray();
+
+        return array_map(function (array $row): array {
+            return [
+                'moto_id' => (int) $row['moto_id'],
+                'modelo' => $row['modelo'],
+                'anio_desde' => $row['anio_desde'],
+                'anio_hasta' => $row['anio_hasta'],
+                'cilindrada' => $row['cilindrada'],
+                'marca_id' => $row['marca_id'] !== null ? (int) $row['marca_id'] : null,
+                'marca_nombre' => $row['marca_nombre'],
+            ];
+        }, $rows);
+    }
+
+    /**
+     * Busca por clave o nombre de producto y devuelve compatibilidades por pieza.
+     *
+     * @return array<int, array{
+     *   id: int,
+     *   clave_proveedor: string,
+     *   nombre: string,
+     *   activo: int,
+     *   enrich_estado: string|null,
+     *   proveedor_id: int|null,
+     *   proveedor_nombre: string|null,
+     *   pieza_maestra_id: int|null,
+     *   pieza_nombre: string|null,
+     *   compatibilidades: list<array{
+     *      id:int,
+     *      confirmada:int,
+     *      contador_confirmaciones:int,
+     *      marca_nombre:string|null,
+     *      moto_modelo:string|null,
+     *      anio_desde:int|null,
+     *      anio_hasta:int|null,
+     *      cilindrada:string|null,
+     *      moto_id:int|null
+     *   }>
+     * }>
+     */
+    public function searchProductosPorTermino(string $q): array
+    {
+        $q = trim($q);
+        if ($q === '' || mb_strlen($q) < 2) {
+            return [];
+        }
+
+        $safe = '%' . $q . '%';
+
+        $rows = $this->db->query(
+            '
+            SELECT
+                p.id AS producto_id,
+                p.clave_proveedor,
+                p.nombre AS producto_nombre,
+                p.activo,
+                p.enrich_estado,
+                p.proveedor_id,
+                p.pieza_maestra_id,
+                pr.nombre AS proveedor_nombre,
+                pm.nombre AS pieza_nombre,
+                c.id AS compat_id,
+                c.confirmada,
+                c.contador_confirmaciones,
+                mo.id AS moto_id,
+                ma.nombre AS marca_nombre,
+                mo.modelo AS moto_modelo,
+                mo.anio_desde,
+                mo.anio_hasta,
+                mo.cilindrada
+            FROM productos p
+            LEFT JOIN proveedores pr ON pr.id = p.proveedor_id
+            LEFT JOIN piezas_maestras pm ON pm.id = p.pieza_maestra_id
+            LEFT JOIN compatibilidades c ON c.pieza_maestra_id = p.pieza_maestra_id
+            LEFT JOIN motocicletas mo ON mo.id = c.motocicleta_id
+            LEFT JOIN marcas ma ON ma.id = mo.marca_id
+            WHERE p.activo = 1
+              AND (
+                   p.clave_proveedor LIKE ?
+                OR p.nombre LIKE ?
+                OR pr.nombre LIKE ?
+              )
+            ORDER BY p.clave_proveedor, ma.nombre, mo.modelo
+            LIMIT 300
+            ',
+            [$safe, $safe, $safe]
+        )->getResultArray();
+
+        $results = [];
+
+        foreach ($rows as $row) {
+            $pid = (int) $row['producto_id'];
+            if (!isset($results[$pid])) {
+                $results[$pid] = [
+                'id' => $pid,
+                    'clave_proveedor' => $row['clave_proveedor'],
+                    'nombre' => $row['producto_nombre'],
+                    'activo' => (int) $row['activo'],
+                    'enrich_estado' => $row['enrich_estado'],
+                    'proveedor_id' => $row['proveedor_id'] !== null ? (int) $row['proveedor_id'] : null,
+                    'proveedor_nombre' => $row['proveedor_nombre'],
+                    'pieza_maestra_id' => $row['pieza_maestra_id'] !== null ? (int) $row['pieza_maestra_id'] : null,
+                    'pieza_nombre' => $row['pieza_nombre'],
+                    'compatibilidades' => [],
+                ];
+            }
+
+            if ($row['compat_id'] !== null) {
+                $cid = (int) $row['compat_id'];
+                if (!isset($results[$pid]['compatibilidades'][$cid])) {
+                    $results[$pid]['compatibilidades'][$cid] = [
+                        'id' => $cid,
+                        'confirmada' => (int) $row['confirmada'],
+                        'contador_confirmaciones' => (int) $row['contador_confirmaciones'],
+                        'marca_nombre' => $row['marca_nombre'],
+                        'moto_modelo' => $row['moto_modelo'],
+                        'anio_desde' => $row['anio_desde'],
+                        'anio_hasta' => $row['anio_hasta'],
+                        'cilindrada' => $row['cilindrada'],
+                        'moto_id' => $row['moto_id'] !== null ? (int) $row['moto_id'] : null,
+                    ];
+                }
+            }
+        }
+
+        foreach ($results as &$result) {
+            $result['compatibilidades'] = array_values($result['compatibilidades']);
+        }
+        unset($result);
+
+        return array_values($results);
+    }
+
+    /**
      * Devuelve todas las marcas para poblar el select de la cascada.
      */
     public function getMarcas(): array
@@ -205,12 +384,12 @@ class SearchModel extends Model
             FROM piezas_maestras pm
             LEFT JOIN productos p        ON p.pieza_maestra_id = pm.id AND p.activo = 1
             LEFT JOIN proveedores pr     ON pr.id = p.proveedor_id
-            LEFT JOIN compatibilidades c ON c.pieza_maestra_id = pm.id
+            LEFT JOIN compatibilidades c ON c.pieza_maestra_id = pm.id AND c.motocicleta_id = ?
             LEFT JOIN motocicletas mo    ON mo.id = c.motocicleta_id
             LEFT JOIN marcas ma          ON ma.id = mo.marca_id
             WHERE pm.id IN ($placeholders)
             ORDER BY pm.nombre, ma.nombre, mo.modelo
-        ", $piezaIds)->getResultArray();
+        ", array_merge([$motoId], $piezaIds))->getResultArray();
 
         $results = [];
         foreach ($rows as $row) {
@@ -290,7 +469,15 @@ class SearchModel extends Model
                     'ultima_busqueda_at'  => date('Y-m-d H:i:s'),
                     'created_at'          => date('Y-m-d H:i:s'),
                     'updated_at'          => date('Y-m-d H:i:s'),
-                ]);
+            ]);
         }
+    }
+
+    private function normalizeModelSearchToken(string $term): string
+    {
+        $normalized = mb_strtoupper(trim($term), 'UTF-8');
+        $normalized = str_replace([' ', '-'], '', $normalized);
+
+        return $normalized;
     }
 }

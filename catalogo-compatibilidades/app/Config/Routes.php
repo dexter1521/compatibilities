@@ -88,6 +88,8 @@ $routes->group('api/v1', static function ($routes) {
 
     // Busqueda
     $routes->get('search', 'Api\V1\SearchController::index');
+    $routes->get('search/moto', 'Api\V1\SearchController::moto');
+    $routes->get('search/producto', 'Api\V1\SearchController::producto');
     $routes->get('search-missed', 'Api\V1\SearchController::missed', ['filter' => 'role:admin']);
 
     // Compatibilidades

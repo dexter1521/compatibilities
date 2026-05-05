@@ -50,6 +50,72 @@ class SearchController extends BaseApiController
         return $this->respondSuccess($results, 'Búsqueda completada.');
     }
 
+    public function moto(): ResponseInterface
+    {
+        $term = trim((string) ($this->request->getGet('q') ?? ''));
+        $page = (int) ($this->request->getGet('page') ?? 1);
+        $legacyPerPage = $this->request->getGet('per_page');
+        $limit = (int) ($this->request->getGet('limit') ?? 50);
+
+        if ($legacyPerPage !== null) {
+            $limit = (int) $legacyPerPage;
+        }
+
+        if ($term === '' || mb_strlen($term) < 2) {
+            return $this->respondValidationErrors([
+                'q' => ['El término debe contener al menos 2 caracteres.'],
+            ]);
+        }
+
+        if ($limit < 1 || $limit > 50) {
+            return $this->respondValidationErrors([
+                'limit' => ['Debe estar entre 1 y 50.'],
+            ]);
+        }
+        if ($page < 1) {
+            return $this->respondValidationErrors([
+                'page' => ['Debe ser mayor o igual a 1.'],
+            ]);
+        }
+
+        $results = $this->service->searchMoto($term, $limit, $page);
+
+        return $this->respondSuccess($results, 'Búsqueda por moto completada.');
+    }
+
+    public function producto(): ResponseInterface
+    {
+        $term = trim((string) ($this->request->getGet('q') ?? ''));
+        $page = (int) ($this->request->getGet('page') ?? 1);
+        $legacyPerPage = $this->request->getGet('per_page');
+        $limit = (int) ($this->request->getGet('limit') ?? 50);
+
+        if ($legacyPerPage !== null) {
+            $limit = (int) $legacyPerPage;
+        }
+
+        if ($term === '' || mb_strlen($term) < 2) {
+            return $this->respondValidationErrors([
+                'q' => ['El término debe contener al menos 2 caracteres.'],
+            ]);
+        }
+
+        if ($limit < 1 || $limit > 50) {
+            return $this->respondValidationErrors([
+                'limit' => ['Debe estar entre 1 y 50.'],
+            ]);
+        }
+        if ($page < 1) {
+            return $this->respondValidationErrors([
+                'page' => ['Debe ser mayor o igual a 1.'],
+            ]);
+        }
+
+        $results = $this->service->searchProducto($term, $limit, $page);
+
+        return $this->respondSuccess($results, 'Búsqueda por producto completada.');
+    }
+
     public function missed(): ResponseInterface
     {
         $page = (int) ($this->request->getGet('page') ?? 1);

@@ -41,8 +41,8 @@ class JwtAuthFilter implements FilterInterface
                 'status' => 401,
                 'success' => false,
                 'data' => null,
-                'message' => 'Token inválido o expirado.',
-                'errors' => ['authorization' => ['token inválido']],
+                'message' => 'Token invalido o expirado.',
+                'errors' => ['authorization' => ['token invalido']],
             ]);
         }
 

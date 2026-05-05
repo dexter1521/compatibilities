@@ -28,6 +28,7 @@ class ImportService
     private string $timezone;
 
     private array $aliasCache       = [];
+    private array $marcaCache       = [];
     private array $piezaMaestraCache = [];
     private array $motoLabelCache    = []; // motoId → 'MARCA-MODELO'
 
@@ -44,6 +45,7 @@ class ImportService
         'Llanta'                => ['LLANTA', 'NEUMATICO'],
         'Cadena de Transmisión' => ['CADENA'],
         'Corona'                => ['CORONA'],
+        'Bobina'                => ['BOBINA', 'BOBINAS', 'ESTATOR'],
         'Catarina'              => ['CATARINA'],
         'Clutch'                => ['CLUTCH', 'EMBRAGUE'],
         'Amortiguador'          => ['AMORTIGUADOR'],
@@ -199,6 +201,11 @@ class ImportService
                 'finalizado_en'  => date('Y-m-d H:i:s'),
                 'updated_at'     => date('Y-m-d H:i:s'),
             ]);
+
+        $sync = $this->syncModelosDetectadosDesdeJob($jobId);
+        if (($sync['creadas_motos'] ?? 0) > 0 || ($sync['creados_aliases'] ?? 0) > 0) {
+            $this->reenrichPendientes();
+        }
 
         return $this->buildRunResult(true, $jobId, '', [
             'total_items' => $totalItems,
@@ -407,6 +414,251 @@ class ImportService
         return 'finalizado';
     }
 
+    /**
+     * Sincroniza modelos detectados del job actual.
+     * Si existe marca en import_items para el producto, crea moto y aliases.
+     *
+     * @return array{creadas_motos:int, creados_aliases:int, pendientes:int}
+     */
+    private function syncModelosDetectadosDesdeJob(int $jobId): array
+    {
+        $jobItems = $this->db->table('import_items')
+            ->select('nombre, marca')
+            ->where('import_job_id', $jobId)
+            ->where('estado !=', 'error')
+            ->get()
+            ->getResultArray();
+
+        if (empty($jobItems)) {
+            return ['creadas_motos' => 0, 'creados_aliases' => 0, 'pendientes' => 0];
+        }
+
+        $names = [];
+        $brandByName = [];
+
+        foreach ($jobItems as $row) {
+            $nombre = (string) ($row['nombre'] ?? '');
+            if ($nombre !== '') {
+                $names[$nombre] = true;
+            }
+            $marca = trim((string) ($row['marca'] ?? ''));
+            if ($nombre !== '' && $marca !== '') {
+                $brandByName[$nombre] = $marca;
+            }
+        }
+
+        if (empty($names)) {
+            return ['creadas_motos' => 0, 'creados_aliases' => 0, 'pendientes' => 0];
+        }
+
+        $rawRows = $this->db->table('modelos_detectados_raw')
+            ->whereIn('nombre_producto', array_keys($names))
+            ->get()
+            ->getResultArray();
+
+        if (empty($rawRows)) {
+            return ['creadas_motos' => 0, 'creados_aliases' => 0, 'pendientes' => 0];
+        }
+
+        $agrupado = [];
+        foreach ($rawRows as $raw) {
+            $modelo = strtoupper(trim((string) $raw['texto_detectado']));
+            if ($modelo === '') {
+                continue;
+            }
+            if (!isset($agrupado[$modelo])) {
+                $agrupado[$modelo] = ['nombres' => [], 'rawIds' => []];
+            }
+            if (($raw['nombre_producto'] ?? '') !== '') {
+                $agrupado[$modelo]['nombres'][] = (string) $raw['nombre_producto'];
+            }
+            $agrupado[$modelo]['rawIds'][] = (int) $raw['id'];
+        }
+
+        $creadasMotos = 0;
+        $creadosAliases = 0;
+        $pendientes = 0;
+
+        foreach ($agrupado as $modelo => $info) {
+            $marcaNombre = $this->resolverMarcaModelo($info['nombres'], $brandByName);
+
+            if ($marcaNombre === null) {
+                $pendientes++;
+                continue;
+            }
+
+            $motoId = $this->getOrCreateMoto($modelo, $marcaNombre);
+            if ($motoId === null) {
+                $pendientes++;
+                continue;
+            }
+
+            $creadasMotos++;
+            $creadosAliases += $this->crearAliasesDesdeModelo($motoId, $modelo);
+
+            $this->db->table('modelos_detectados_raw')
+                ->whereIn('id', $info['rawIds'])
+                ->delete();
+        }
+
+        return [
+            'creadas_motos' => $creadasMotos,
+            'creados_aliases' => $creadosAliases,
+            'pendientes' => $pendientes,
+        ];
+    }
+
+    /**
+     * @param string[] $nombres
+     * @param array<string,string> $brandByName
+     */
+    private function resolverMarcaModelo(array $nombres, array $brandByName): ?string
+    {
+        foreach ($nombres as $nombreProducto) {
+            if (isset($brandByName[$nombreProducto]) && $brandByName[$nombreProducto] !== '') {
+                return mb_strtoupper(trim((string) $brandByName[$nombreProducto]));
+            }
+        }
+
+        $marcas = $this->getMarcasCache();
+        foreach ($nombres as $nombreProducto) {
+            $texto = mb_strtoupper(trim((string) $nombreProducto));
+            foreach ($marcas as $marca) {
+                if (str_contains($texto, mb_strtoupper($marca))) {
+                    return mb_strtoupper($marca);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private function getMarcasCache(): array
+    {
+        if (!$this->marcaCache) {
+            $rows = $this->db->table('marcas')
+                ->select('id, nombre')
+                ->where('activo', 1)
+                ->orderBy('nombre', 'ASC')
+                ->get()
+                ->getResultArray();
+
+            foreach ($rows as $row) {
+                $this->marcaCache[trim((string) $row['nombre'])] = (int) $row['id'];
+            }
+        }
+
+        return array_keys($this->marcaCache);
+    }
+
+    private function getMarcaId(string $marcaNombre): ?int
+    {
+        $marcaNombre = trim($marcaNombre);
+        if ($marcaNombre === '') {
+            return null;
+        }
+
+        $marcaNombreUpper = mb_strtoupper($marcaNombre);
+        foreach ($this->marcaCache as $nombre => $id) {
+            if (mb_strtoupper($nombre) === $marcaNombreUpper) {
+                return $id;
+            }
+        }
+
+        $slug = $this->makeSlug($marcaNombre, 'marcas');
+        $this->db->table('marcas')->insert([
+            'nombre'     => $marcaNombre,
+            'slug'       => $slug,
+            'activo'     => 1,
+            'created_at' => date('Y-m-d H:i:s'),
+            'updated_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        $marcaId = (int) $this->db->insertID();
+        $this->marcaCache[$marcaNombre] = $marcaId;
+
+        return $marcaId;
+    }
+
+    private function getOrCreateMoto(string $modelo, string $marcaNombre): ?int
+    {
+        $marcaId = $this->getMarcaId($marcaNombre);
+        if ($marcaId === null) {
+            return null;
+        }
+
+        $exists = $this->db->table('motocicletas')
+            ->where('marca_id', $marcaId)
+            ->where('UPPER(modelo)', $modelo)
+            ->get()
+            ->getRowArray();
+
+        if ($exists) {
+            return (int) $exists['id'];
+        }
+
+        $slugBase = mb_strtolower($marcaNombre . '-' . $modelo);
+        $slug = $slugBase;
+        $i = 1;
+        while ($this->db->table('motocicletas')->where('slug', $slug)->countAllResults() > 0) {
+            $slug = $slugBase . '-' . $i++;
+        }
+
+        $this->db->table('motocicletas')->insert([
+            'marca_id'   => $marcaId,
+            'modelo'     => $modelo,
+            'slug'       => $slug,
+            'created_at' => date('Y-m-d H:i:s'),
+            'updated_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        return (int) $this->db->insertID();
+    }
+
+    private function crearAliasesDesdeModelo(int $motoId, string $modelo): int
+    {
+        if (!preg_match('/^([A-Z]+)(\\d+[A-Z]?)$/', $modelo, $parts)) {
+            return 0;
+        }
+        $prefix = $parts[1];
+        $num = $parts[2];
+
+        $aliases = [
+            $modelo,
+            $prefix . ' ' . $num,
+            $prefix . '-' . $num,
+        ];
+
+        $creados = 0;
+        foreach ($aliases as $alias) {
+            $yaExiste = $this->db->table('alias_motos')
+                ->where('motocicleta_id', $motoId)
+                ->where('UPPER(alias)', strtoupper($alias))
+                ->countAllResults();
+            if ($yaExiste > 0) {
+                continue;
+            }
+
+            $aliasSlug = strtolower(str_replace(' ', '-', trim($alias)));
+            $base = $aliasSlug;
+            $i = 1;
+            while ($this->db->table('alias_motos')->where('slug', $aliasSlug)->countAllResults() > 0) {
+                $aliasSlug = $base . '-' . $i++;
+            }
+
+            $this->db->table('alias_motos')->insert([
+                'motocicleta_id' => $motoId,
+                'alias'          => strtoupper($alias),
+                'slug'           => $aliasSlug,
+                'created_at'     => date('Y-m-d H:i:s'),
+                'updated_at'     => date('Y-m-d H:i:s'),
+            ]);
+            $creados++;
+        }
+
+        return $creados;
+    }
+
     private function failJob(int $jobId, string $msg): void
     {
         $this->db->table('import_jobs')
@@ -537,6 +789,13 @@ class ImportService
         $desc    = $this->normalize($desc);
         $found   = [];
 
+        $desc    = $this->normalize($desc);
+        $found   = $this->detectarMotosPorModeloDirecto($desc, (int) $marcaId);
+
+        if (!empty($found)) {
+            return $found;
+        }
+
         foreach ($this->getAliases() as $a) {
             // Solo aliases de motos de esta marca
             $motoMarcaId = $this->getMotoMarcaId((int) $a['motocicleta_id']);
@@ -551,6 +810,58 @@ class ImportService
 
             if (str_contains($desc, $needle)) {
                 $motoId = (int) $a['motocicleta_id'];
+                if (!in_array($motoId, $found, true)) {
+                    $found[] = $motoId;
+                }
+            }
+        }
+
+        return $found;
+    }
+
+    /** @return int[] */
+    private function detectarMotosPorModeloDirecto(string $desc, ?int $marcaId = null): array
+    {
+        $found = [];
+        $desc  = strtoupper($desc);
+        $desc  = preg_replace('/[^A-Z0-9\\-\\s]/', ' ', $desc);
+        $desc  = preg_replace('/\\s+/', ' ', $desc);
+
+        preg_match_all('/\\b([A-Z]{1,5})\\s*-?\\s*([0-9]{2,4}[A-Z]?)\\b/u', $desc, $matches, PREG_SET_ORDER);
+        if (empty($matches)) {
+            return [];
+        }
+
+        $tokens = [];
+        foreach ($matches as $match) {
+            $token = $this->normalizeModelToken($match[1] . $match[2]);
+            if ($token === '') {
+                continue;
+            }
+            $tokens[$token] = true;
+        }
+
+        if (empty($tokens)) {
+            return [];
+        }
+
+        foreach (array_keys($tokens) as $token) {
+            $sql = "
+                SELECT id
+                FROM motocicletas
+                WHERE UPPER(REPLACE(REPLACE(modelo, ' ', ''), '-', '')) = ?
+            ";
+            $params = [$token];
+
+            if ($marcaId !== null && $marcaId > 0) {
+                $sql     .= ' AND marca_id = ?';
+                $params[] = $marcaId;
+            }
+
+            $rows = $this->db->query($sql, $params)->getResultArray();
+
+            foreach ($rows as $row) {
+                $motoId = (int) $row['id'];
                 if (!in_array($motoId, $found, true)) {
                     $found[] = $motoId;
                 }
@@ -649,6 +960,11 @@ class ImportService
     private function detectarMotos(string $desc): array
     {
         $found = [];
+        $descDirecto = $this->normalizeModelosDirecto($desc);
+        if (!empty($descDirecto)) {
+            return $descDirecto;
+        }
+
         $desc  = $this->normalize($desc);
 
         foreach ($this->getAliases() as $a) {
@@ -670,6 +986,23 @@ class ImportService
         }
 
         return $found;
+    }
+
+    /**
+     * Detecta motos por código de modelo directo (ej. CS125, DS150, WS 150, WS-150).
+     * Útil cuando aún no hay alias creada para la moto en ese momento.
+     *
+     * @return int[]
+     */
+    private function normalizeModelosDirecto(string $desc): array
+    {
+        $directos = $this->detectarMotosPorModeloDirecto($this->normalize($desc));
+        return $directos;
+    }
+
+    private function normalizeModelToken(string $token): string
+    {
+        return str_replace([' ', '-'], '', strtoupper(trim($token)));
     }
 
     private function detectarTipo(string $desc): ?string

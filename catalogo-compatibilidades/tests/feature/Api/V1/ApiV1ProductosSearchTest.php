@@ -199,6 +199,212 @@ final class ApiV1ProductosSearchTest extends TestCase
         $this->assertFalse((bool) ($badPerPageHigh['json']['success'] ?? true));
     }
 
+    public function testSearchMotoEndpointReturnsCompatiblesForMotoQuery(): void
+    {
+        $token = $this->getAccessToken('admin@sharkmotors.local', 'Admin123!');
+
+        $suffix = (string) time() . (string) random_int(100, 999);
+        $marcaId = $this->createMarca('Marca Moto ' . $suffix, 'marca-moto-' . $suffix);
+        $proveedorId = $this->createProveedor('Proveedor Moto ' . $suffix, 'proveedor-moto-' . $suffix);
+
+        $motoResponse = $this->request('POST', '/api/v1/motocicletas', [
+            'marca_id' => $marcaId,
+            'modelo' => 'CS125 ' . $suffix,
+            'anio_desde' => 2020,
+            'anio_hasta' => 2024,
+        ], [
+            'Authorization: Bearer ' . $token,
+        ]);
+        $this->assertSame(201, $motoResponse['status']);
+        $motoId = (int) ($motoResponse['json']['data']['id'] ?? 0);
+        $this->assertGreaterThan(0, $motoId);
+
+        $piezaResponse = $this->request('POST', '/api/v1/piezas', [
+            'nombre' => 'Pieza Moto ' . $suffix,
+        ], [
+            'Authorization: Bearer ' . $token,
+        ]);
+        $this->assertSame(201, $piezaResponse['status']);
+        $piezaId = (int) ($piezaResponse['json']['data']['id'] ?? 0);
+        $this->assertGreaterThan(0, $piezaId);
+
+        $productoResponse = $this->request('POST', '/api/v1/productos', [
+            'proveedor_id' => $proveedorId,
+            'clave_proveedor' => 'CS-PRD-' . $suffix,
+            'nombre' => 'Producto CS125 ' . $suffix,
+            'activo' => 1,
+            'pieza_maestra_id' => $piezaId,
+        ], [
+            'Authorization: Bearer ' . $token,
+        ]);
+        $this->assertSame(201, $productoResponse['status']);
+
+        $compatCreate = $this->request('POST', '/api/v1/compatibilidades', [
+            'pieza_maestra_id' => $piezaId,
+            'motocicleta_id' => $motoId,
+            'confirmada' => 0,
+        ], [
+            'Authorization: Bearer ' . $token,
+        ]);
+        $this->assertSame(201, $compatCreate['status']);
+
+        $searchMoto = $this->request('GET', '/api/v1/search/moto?q=CS125 ' . $suffix . '&per_page=10', null, [
+            'Authorization: Bearer ' . $token,
+        ]);
+        $this->assertSame(200, $searchMoto['status']);
+        $this->assertArrayHasKey('items', $searchMoto['json']['data'] ?? []);
+
+        $items = $searchMoto['json']['data']['items'];
+        $this->assertIsArray($items);
+        $this->assertCount(1, $items);
+        $this->assertArrayHasKey('moto', $items[0]);
+        $this->assertSame($motoId, (int) ($items[0]['moto']['moto_id'] ?? 0));
+        $this->assertArrayHasKey('piezas', $items[0]);
+        $this->assertCount(1, $items[0]['piezas']);
+        $this->assertSame($piezaId, (int) ($items[0]['piezas'][0]['pieza_maestra_id'] ?? 0));
+    }
+
+    public function testSearchMotoEndpointMatchesNormalizedAliases(): void
+    {
+        $token = $this->getAccessToken('admin@sharkmotors.local', 'Admin123!');
+
+        $suffix = (string) time() . (string) random_int(100, 999);
+        $marcaId = $this->createMarca('Marca Aliases ' . $suffix, 'marca-alias-' . $suffix);
+        $proveedorId = $this->createProveedor('Proveedor Alias ' . $suffix, 'proveedor-alias-' . $suffix);
+
+        $motoResponse = $this->request('POST', '/api/v1/motocicletas', [
+            'marca_id' => $marcaId,
+            'modelo' => 'CS125',
+            'anio_desde' => 2019,
+            'anio_hasta' => 2024,
+        ], [
+            'Authorization: Bearer ' . $token,
+        ]);
+        $this->assertSame(201, $motoResponse['status']);
+        $motoId = (int) ($motoResponse['json']['data']['id'] ?? 0);
+        $this->assertGreaterThan(0, $motoId);
+
+        $piezaResponse = $this->request('POST', '/api/v1/piezas', [
+            'nombre' => 'Pieza Alias ' . $suffix,
+        ], [
+            'Authorization: Bearer ' . $token,
+        ]);
+        $this->assertSame(201, $piezaResponse['status']);
+        $piezaId = (int) ($piezaResponse['json']['data']['id'] ?? 0);
+        $this->assertGreaterThan(0, $piezaId);
+
+        $productoResponse = $this->request('POST', '/api/v1/productos', [
+            'proveedor_id' => $proveedorId,
+            'clave_proveedor' => 'ALIAS-' . $suffix,
+            'nombre' => 'Producto Alias Moto ' . $suffix,
+            'activo' => 1,
+            'pieza_maestra_id' => $piezaId,
+        ], [
+            'Authorization: Bearer ' . $token,
+        ]);
+        $this->assertSame(201, $productoResponse['status']);
+
+        $compatCreate = $this->request('POST', '/api/v1/compatibilidades', [
+            'pieza_maestra_id' => $piezaId,
+            'motocicleta_id' => $motoId,
+            'confirmada' => 1,
+        ], [
+            'Authorization: Bearer ' . $token,
+        ]);
+        $this->assertSame(201, $compatCreate['status']);
+
+        $variants = ['CS-125', 'CS 125'];
+        foreach ($variants as $query) {
+            $searchMoto = $this->request('GET', '/api/v1/search/moto?q=' . urlencode($query) . '&per_page=10', null, [
+                'Authorization: Bearer ' . $token,
+            ]);
+            $this->assertSame(200, $searchMoto['status']);
+            $this->assertArrayHasKey('items', $searchMoto['json']['data'] ?? []);
+
+            $items = $searchMoto['json']['data']['items'];
+            $this->assertIsArray($items);
+            $this->assertCount(1, $items);
+            $this->assertSame($motoId, (int) ($items[0]['moto']['moto_id'] ?? 0));
+            $this->assertArrayHasKey('piezas', $items[0]);
+            $this->assertCount(1, $items[0]['piezas']);
+            $this->assertSame($piezaId, (int) ($items[0]['piezas'][0]['pieza_maestra_id'] ?? 0));
+        }
+    }
+
+    public function testSearchProductoEndpointReturnsCompatiblesForProductoQuery(): void
+    {
+        $token = $this->getAccessToken('admin@sharkmotors.local', 'Admin123!');
+
+        $suffix = (string) time() . (string) random_int(100, 999);
+        $marcaId = $this->createMarca('Marca Prod ' . $suffix, 'marca-prod-' . $suffix);
+        $proveedorId = $this->createProveedor('Proveedor Prod ' . $suffix, 'proveedor-prod-' . $suffix);
+
+        $motoResponse = $this->request('POST', '/api/v1/motocicletas', [
+            'marca_id' => $marcaId,
+            'modelo' => 'MX ' . $suffix,
+            'anio_desde' => 2022,
+            'anio_hasta' => 2022,
+        ], [
+            'Authorization: Bearer ' . $token,
+        ]);
+        $this->assertSame(201, $motoResponse['status']);
+        $motoId = (int) ($motoResponse['json']['data']['id'] ?? 0);
+        $this->assertGreaterThan(0, $motoId);
+
+        $piezaResponse = $this->request('POST', '/api/v1/piezas', [
+            'nombre' => 'Pieza Prod ' . $suffix,
+        ], [
+            'Authorization: Bearer ' . $token,
+        ]);
+        $this->assertSame(201, $piezaResponse['status']);
+        $piezaId = (int) ($piezaResponse['json']['data']['id'] ?? 0);
+        $this->assertGreaterThan(0, $piezaId);
+
+        $productClave = '049RTE-EST';
+        $productoResponse = $this->request('POST', '/api/v1/productos', [
+            'proveedor_id' => $proveedorId,
+            'clave_proveedor' => $productClave,
+            'nombre' => 'ESTATOR 8 BOBINAS MOTONETA',
+            'activo' => 1,
+            'pieza_maestra_id' => $piezaId,
+        ], [
+            'Authorization: Bearer ' . $token,
+        ]);
+        $this->assertSame(201, $productoResponse['status']);
+
+        $compatCreate = $this->request('POST', '/api/v1/compatibilidades', [
+            'pieza_maestra_id' => $piezaId,
+            'motocicleta_id' => $motoId,
+            'confirmada' => 1,
+        ], [
+            'Authorization: Bearer ' . $token,
+        ]);
+        $this->assertSame(201, $compatCreate['status']);
+
+        $searchProducto = $this->request('GET', '/api/v1/search/producto?q=' . urlencode($productClave), null, [
+            'Authorization: Bearer ' . $token,
+        ]);
+        $this->assertSame(200, $searchProducto['status']);
+        $this->assertArrayHasKey('items', $searchProducto['json']['data'] ?? []);
+
+        $items = $searchProducto['json']['data']['items'];
+        $this->assertIsArray($items);
+        $this->assertGreaterThan(0, count($items));
+
+        $match = null;
+        foreach ($items as $item) {
+            if (($item['clave_proveedor'] ?? '') === $productClave) {
+                $match = $item;
+                break;
+            }
+        }
+
+        $this->assertNotNull($match);
+        $this->assertArrayHasKey('compatibilidades', $match);
+        $this->assertIsArray($match['compatibilidades']);
+        $this->assertGreaterThan(0, count($match['compatibilidades']));
+    }
+
     public function testImportProductosCsvReturnsJobResult(): void
     {
         $token = $this->getAccessToken('admin@sharkmotors.local', 'Admin123!');
