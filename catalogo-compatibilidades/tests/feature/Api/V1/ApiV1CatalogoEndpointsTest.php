@@ -280,6 +280,102 @@ final class ApiV1CatalogoEndpointsTest extends TestCase
         }
     }
 
+    public function testCompatibilidadesDuplicateAndConfirmCounter(): void
+    {
+        $adminToken = $this->getAccessToken('admin@sharkmotors.local', 'Admin123!');
+
+        $suffix = (string) time() . (string) random_int(100, 999);
+        $marcaId = $this->createMarca('Marca Compat ' . $suffix, 'marca-compat-' . $suffix);
+
+        $motoCreate = $this->request('POST', '/api/v1/motocicletas', [
+            'marca_id' => $marcaId,
+            'modelo' => 'Moto Compat ' . $suffix,
+            'anio_desde' => 2020,
+            'anio_hasta' => 2024,
+        ], ['Authorization: Bearer ' . $adminToken]);
+        $this->assertSame(201, $motoCreate['status']);
+        $motoId = (int) ($motoCreate['json']['data']['id'] ?? 0);
+        $this->assertGreaterThan(0, $motoId);
+
+        $piezaCreate = $this->request('POST', '/api/v1/piezas', [
+            'nombre' => 'Pieza Compat ' . $suffix,
+        ], ['Authorization: Bearer ' . $adminToken]);
+        $this->assertSame(201, $piezaCreate['status']);
+        $piezaId = (int) ($piezaCreate['json']['data']['id'] ?? 0);
+        $this->assertGreaterThan(0, $piezaId);
+
+        $payload = [
+            'pieza_maestra_id' => $piezaId,
+            'motocicleta_id' => $motoId,
+            'confirmada' => 0,
+            'contador_confirmaciones' => 0,
+        ];
+
+        $created = $this->request('POST', '/api/v1/compatibilidades', $payload, [
+            'Authorization: Bearer ' . $adminToken,
+        ]);
+        $this->assertSame(201, $created['status']);
+        $compatId = (int) ($created['json']['data']['id'] ?? 0);
+        $this->assertGreaterThan(0, $compatId);
+
+        $duplicate = $this->request('POST', '/api/v1/compatibilidades', $payload, [
+            'Authorization: Bearer ' . $adminToken,
+        ]);
+        $this->assertSame(409, $duplicate['status'], 'La combinación repetida debe devolver 409');
+        $this->assertFalse((bool) ($duplicate['json']['success'] ?? true));
+
+        $confirm1 = $this->request('PATCH', '/api/v1/compatibilidades/' . $compatId . '/confirmar', null, [
+            'Authorization: Bearer ' . $adminToken,
+        ]);
+        $this->assertSame(200, $confirm1['status']);
+        $this->assertSame(1, (int) ($confirm1['json']['data']['confirmada'] ?? -1));
+        $this->assertSame(1, (int) ($confirm1['json']['data']['contador_confirmaciones'] ?? -1));
+
+        $confirm2 = $this->request('PATCH', '/api/v1/compatibilidades/' . $compatId . '/confirmar', null, [
+            'Authorization: Bearer ' . $adminToken,
+        ]);
+        $this->assertSame(200, $confirm2['status']);
+        $this->assertSame(1, (int) ($confirm2['json']['data']['confirmada'] ?? -1));
+        $this->assertSame(2, (int) ($confirm2['json']['data']['contador_confirmaciones'] ?? -1));
+    }
+
+    public function testProductoCreateDuplicatePorProveedorClave409(): void
+    {
+        $token = $this->getAccessToken('admin@sharkmotors.local', 'Admin123!');
+
+        $suffix = (string) time() . (string) random_int(100, 999);
+        $proveedor1 = $this->createProveedor('Proveedor ' . $suffix, 'proveedor-' . $suffix);
+        $proveedor2 = $this->createProveedor('Proveedor otro ' . $suffix, 'proveedor2-' . $suffix);
+
+        $clave = 'CLAVE-' . $suffix;
+        $nombre = 'Producto Control ' . $suffix;
+
+        $first = $this->request('POST', '/api/v1/productos', [
+            'proveedor_id' => $proveedor1,
+            'clave_proveedor' => $clave,
+            'nombre' => $nombre,
+            'activo' => 1,
+        ], ['Authorization: Bearer ' . $token]);
+        $this->assertSame(201, $first['status']);
+
+        $duplicateProveedor = $this->request('POST', '/api/v1/productos', [
+            'proveedor_id' => $proveedor1,
+            'clave_proveedor' => $clave,
+            'nombre' => $nombre . ' duplicado',
+            'activo' => 1,
+        ], ['Authorization: Bearer ' . $token]);
+        $this->assertSame(409, $duplicateProveedor['status'], 'Clave repetida dentro del mismo proveedor debe devolver 409');
+        $this->assertFalse((bool) ($duplicateProveedor['json']['success'] ?? true));
+
+        $otherProveedor = $this->request('POST', '/api/v1/productos', [
+            'proveedor_id' => $proveedor2,
+            'clave_proveedor' => $clave,
+            'nombre' => $nombre . ' otro proveedor',
+            'activo' => 1,
+        ], ['Authorization: Bearer ' . $token]);
+        $this->assertSame(201, $otherProveedor['status']);
+    }
+
     private function createMarca(string $nombre, string $slug): int
     {
         $stmt = $this->db->prepare('INSERT INTO marcas (nombre, slug, activo, created_at, updated_at) VALUES (?, ?, 1, NOW(), NOW())');
@@ -294,6 +390,25 @@ final class ApiV1CatalogoEndpointsTest extends TestCase
 
         if (!$ok || $id <= 0) {
             $this->fail('No se pudo crear marca para test.');
+        }
+
+        return $id;
+    }
+
+    private function createProveedor(string $nombre, string $slug): int
+    {
+        $stmt = $this->db->prepare('INSERT INTO proveedores (nombre, slug, created_at, updated_at) VALUES (?, ?, NOW(), NOW())');
+        if (!$stmt) {
+            $this->fail('No se pudo preparar insert proveedor.');
+        }
+
+        $stmt->bind_param('ss', $nombre, $slug);
+        $ok = $stmt->execute();
+        $id = (int) $this->db->insert_id;
+        $stmt->close();
+
+        if (!$ok || $id <= 0) {
+            $this->fail('No se pudo crear proveedor para test.');
         }
 
         return $id;
