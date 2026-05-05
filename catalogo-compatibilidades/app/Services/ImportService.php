@@ -39,6 +39,50 @@ class ImportService
         'cs', 'dsg', 'gts', 'xft', 'dsr', 'rt', 'sz', 'gl',
     ];
 
+    /** Mapa de fallback: modelo detectado -> marca canónica para procesamiento de lotes pendientes. */
+    private const MAPA_MODELO_MARCA_AUTO = [
+        'CS125'  => 'ITALIKA',
+        'DS125'  => 'ITALIKA',
+        'DS150'  => 'ITALIKA',
+        'DSG125' => 'ITALIKA',
+        'FT110'  => 'ITALIKA',
+        'FT115'  => 'ITALIKA',
+        'FT116'  => 'ITALIKA',
+        'FT180'  => 'ITALIKA',
+        'FT200'  => 'ITALIKA',
+        'FT250'  => 'ITALIKA',
+        'FT125'  => 'ITALIKA',
+        'XFT125' => 'ITALIKA',
+        'DM125'  => 'ITALIKA',
+        'DM150'  => 'ITALIKA',
+        'DM250'  => 'ITALIKA',
+        'RT180'  => 'ITALIKA',
+        'RT200'  => 'ITALIKA',
+        'RT250'  => 'ITALIKA',
+        'NS150'  => 'BAJAJ',
+        'NS160'  => 'BAJAJ',
+        'NS200'  => 'BAJAJ',
+        'RS200'  => 'BAJAJ',
+        'GTS175' => 'VENTO',
+        'GTS300' => 'VENTO',
+        'WS175'  => 'VENTO',
+        'YBR125' => 'YAMAHA',
+        'FZ16'   => 'YAMAHA',
+        'FZ250'  => 'YAMAHA',
+        'SZ250'  => 'ITALIKA',
+        'EN125'  => 'SUZUKI',
+        'EN150'  => 'SUZUKI',
+        'GN125'  => 'SUZUKI',
+        'RC125'  => 'HONDA',
+        'RC150'  => 'HONDA',
+        'RC200'  => 'HONDA',
+        'RC250'  => 'HONDA',
+        'RC390'  => 'KTM',
+        'AT110'  => 'HONDA',
+        'CG125'  => 'HONDA',
+        'BWS100' => 'YAMAHA',
+    ];
+
     private array $mapTipos = [
         'Filtro de Aceite'      => ['FILTRO DE ACEITE'],
         'Filtro de Aire'        => ['FILTRO DE AIRE', 'FILTRO AIRE'],
@@ -212,7 +256,13 @@ class ImportService
             ]);
 
         $sync = $this->syncModelosDetectadosDesdeJob($jobId);
-        if (($sync['creadas_motos'] ?? 0) > 0 || ($sync['creados_aliases'] ?? 0) > 0) {
+        $syncGlobal = $this->syncModelosDetectadosPendientes();
+
+        if (
+            (($sync['creadas_motos'] ?? 0) > 0 || ($sync['creados_aliases'] ?? 0) > 0)
+            || (($syncGlobal['creadas_motos'] ?? 0) > 0)
+            || (($syncGlobal['creados_aliases'] ?? 0) > 0)
+        ) {
             $this->reenrichPendientes();
         }
 
@@ -585,7 +635,7 @@ class ImportService
         $pendientes = 0;
 
         foreach ($agrupado as $modelo => $info) {
-            $marcaNombre = $this->resolverMarcaModelo($info['nombres'], $brandByName);
+            $marcaNombre = $this->resolverMarcaModelo($modelo, $info['nombres'], $brandByName);
 
             if ($marcaNombre === null) {
                 $pendientes++;
@@ -614,11 +664,80 @@ class ImportService
     }
 
     /**
+     * Sincroniza modelos detectados de toda la cola `modelos_detectados_raw`,
+     * útil para cerrar pendientes de importaciones anteriores sin perder criterio de marca.
+     *
+     * @return array{creadas_motos:int,creados_aliases:int,pendientes:int}
+     */
+    private function syncModelosDetectadosPendientes(): array
+    {
+        $rawRows = $this->db->table('modelos_detectados_raw')
+            ->get()
+            ->getResultArray();
+
+        if (empty($rawRows)) {
+            return ['creadas_motos' => 0, 'creados_aliases' => 0, 'pendientes' => 0];
+        }
+
+        $agrupado = [];
+        foreach ($rawRows as $raw) {
+            $modelo = strtoupper(trim((string) $raw['texto_detectado']));
+            if ($modelo === '') {
+                continue;
+            }
+            if (!isset($agrupado[$modelo])) {
+                $agrupado[$modelo] = ['nombres' => [], 'rawIds' => []];
+            }
+            if (($raw['nombre_producto'] ?? '') !== '') {
+                $agrupado[$modelo]['nombres'][] = (string) $raw['nombre_producto'];
+            }
+            $agrupado[$modelo]['rawIds'][] = (int) $raw['id'];
+        }
+
+        $creadasMotos = 0;
+        $creadosAliases = 0;
+        $pendientes = 0;
+
+        foreach ($agrupado as $modelo => $info) {
+            $marcaNombre = $this->resolverMarcaModelo($modelo, $info['nombres'], []);
+            if ($marcaNombre === null) {
+                $pendientes++;
+                continue;
+            }
+
+            $motoId = $this->getOrCreateMoto($modelo, $marcaNombre);
+            if ($motoId === null) {
+                $pendientes++;
+                continue;
+            }
+
+            $creadasMotos++;
+            $creadosAliases += $this->crearAliasesDesdeModelo($motoId, $modelo);
+
+            $this->db->table('modelos_detectados_raw')
+                ->whereIn('id', $info['rawIds'])
+                ->delete();
+        }
+
+        return [
+            'creadas_motos' => $creadasMotos,
+            'creados_aliases' => $creadosAliases,
+            'pendientes' => $pendientes,
+        ];
+    }
+
+    /**
+     * @param string   $modeloTextoDetectado Modelo detectado y normalizado (ej. DS125).
      * @param string[] $nombres
      * @param array<string,string> $brandByName
      */
-    private function resolverMarcaModelo(array $nombres, array $brandByName): ?string
+    private function resolverMarcaModelo(string $modeloTextoDetectado, array $nombres, array $brandByName): ?string
     {
+        $modelo = strtoupper(trim($modeloTextoDetectado));
+        if ($modelo !== '' && isset(self::MAPA_MODELO_MARCA_AUTO[$modelo])) {
+            return self::MAPA_MODELO_MARCA_AUTO[$modelo];
+        }
+
         foreach ($nombres as $nombreProducto) {
             if (isset($brandByName[$nombreProducto]) && $brandByName[$nombreProducto] !== '') {
                 return mb_strtoupper(trim((string) $brandByName[$nombreProducto]));
