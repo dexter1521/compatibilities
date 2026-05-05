@@ -31,6 +31,13 @@ class ImportService
     private array $marcaCache       = [];
     private array $piezaMaestraCache = [];
     private array $motoLabelCache    = []; // motoId → 'MARCA-MODELO'
+    private array $motoMarcaCache    = [];
+
+    private const PREFIJOS_MODELOS_VALIDOS = [
+        'ft', 'dm', 'dt', 'ds', 'at', 'ws', 'rc', 'ns', 'rs', 'gn', 'gs',
+        'cg', 'fz', 'bws', 'terra', 'storm', 'boxer', 'pulsar', 'en', 'ybr',
+        'cs', 'dsg', 'gts', 'xft', 'dsr', 'rt', 'sz', 'gl',
+    ];
 
     private array $mapTipos = [
         'Filtro de Aceite'      => ['FILTRO DE ACEITE'],
@@ -190,6 +197,8 @@ class ImportService
             }
         }
 
+        $this->indexarModelosDetectadosDesdeImport($jobId);
+
         $estado = $this->buildImportState($procesados, $errores);
 
         $this->db->table('import_jobs')
@@ -213,6 +222,102 @@ class ImportService
             'errores'     => $errores,
             'estado'      => $estado,
         ]);
+    }
+
+    /**
+     * Detecta modelos de moto en los nombres importados y:
+     * - genera aliases para modelos ya registrados,
+     * - guarda los desconocidos en modelos_detectados_raw para procesarlos por marca.
+     */
+    private function indexarModelosDetectadosDesdeImport(int $jobId): void
+    {
+        $items = $this->db->table('import_items')
+            ->select('id, nombre')
+            ->where('import_job_id', $jobId)
+            ->where('estado !=', 'error')
+            ->where('nombre !=', '')
+            ->get()
+            ->getResultArray();
+
+        if (empty($items)) {
+            return;
+        }
+
+        foreach ($items as $item) {
+            $nombre = trim((string) ($item['nombre'] ?? ''));
+            if ($nombre === '') {
+                continue;
+            }
+
+            $modelos = $this->detectarModelosDesdeTexto($nombre);
+            if (empty($modelos)) {
+                continue;
+            }
+
+            foreach ($modelos as $modelo) {
+                $moto = $this->db->table('motocicletas')
+                    ->select('id')
+                    ->where('UPPER(modelo)', $modelo)
+                    ->get()->getRowArray();
+
+                if (!$moto) {
+                    $moto = $this->db->table('motocicletas')
+                        ->select('id')
+                        ->like('UPPER(modelo)', $modelo)
+                        ->limit(1)
+                        ->get()->getRowArray();
+                }
+
+                if ($moto) {
+                    $motoId = (int) $moto['id'];
+                    $this->crearAliasesDesdeModelo($motoId, $modelo);
+                    continue;
+                }
+
+                $exists = $this->db->table('modelos_detectados_raw')
+                    ->where('texto_detectado', $modelo)
+                    ->where('nombre_producto', $nombre)
+                    ->countAllResults();
+
+                if ($exists === 0) {
+                    $this->db->table('modelos_detectados_raw')->insert([
+                        'texto_detectado' => $modelo,
+                        'nombre_producto' => $nombre,
+                        'created_at'      => date('Y-m-d H:i:s'),
+                    ]);
+                }
+            }
+        }
+    }
+
+    /**
+     * @return string[] lista de códigos normalizados tipo FT150, DS125, RT200.
+     */
+    private function detectarModelosDesdeTexto(string $texto): array
+    {
+        $desc = mb_strtolower($texto);
+        $desc = str_replace(['-', '_', '.', ';'], ' ', $desc);
+        $desc = preg_replace('/\s+/', ' ', $desc);
+        $desc = mb_strtoupper(trim($desc));
+
+        preg_match_all('/\b([A-Z]{1,4})\s?-?\s?(\d{2,4}[A-Z]?)\b/', $desc, $matches, PREG_SET_ORDER);
+        if (empty($matches)) {
+            return [];
+        }
+
+        $encontrados = [];
+        foreach ($matches as $match) {
+            $prefijo = strtolower(trim($match[1]));
+            $numero  = trim($match[2]);
+
+            if (!in_array($prefijo, self::PREFIJOS_MODELOS_VALIDOS, true)) {
+                continue;
+            }
+
+            $encontrados[strtoupper($prefijo . $numero)] = true;
+        }
+
+        return array_keys($encontrados);
     }
 
     /**
@@ -870,9 +975,6 @@ class ImportService
 
         return $found;
     }
-
-    /** Cache de motocicleta_id → marca_id para no repetir queries. */
-    private array $motoMarcaCache = [];
 
     private function getMotoMarcaId(int $motoId): ?int
     {
