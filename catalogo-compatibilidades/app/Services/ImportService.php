@@ -789,6 +789,17 @@ class ImportService
             }
         }
 
+        $marcaExistente = $this->db->table('marcas')
+            ->where('UPPER(nombre)', $marcaNombreUpper)
+            ->get()
+            ->getRowArray();
+
+        if ($marcaExistente) {
+            $marcaId = (int) $marcaExistente['id'];
+            $this->marcaCache[$marcaExistente['nombre']] = $marcaId;
+            return $marcaId;
+        }
+
         $slug = $this->makeSlug($marcaNombre, 'marcas');
         $this->db->table('marcas')->insert([
             'nombre'     => $marcaNombre,
